@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jul 27, 2025 at 12:56 PM
+-- Generation Time: Aug 17, 2025 at 09:20 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -79,10 +79,23 @@ CREATE TABLE `leaderboardentry` (
 CREATE TABLE `notification` (
   `NotificationID` int(11) NOT NULL,
   `UserID` int(11) NOT NULL,
-  `Message` text NOT NULL,
+  `ReportID` int(11) NOT NULL,
+  `Title` varchar(120) NOT NULL,
+  `Body` varchar(255) NOT NULL,
+  `DataJSON` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`DataJSON`)),
+  `IsRead` tinyint(1) NOT NULL DEFAULT 0,
   `CreatedAt` datetime NOT NULL DEFAULT current_timestamp(),
-  `SeenStatus` varchar(10) NOT NULL DEFAULT 'Unseen'
+  `ReadAt` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `notification`
+--
+
+INSERT INTO `notification` (`NotificationID`, `UserID`, `ReportID`, `Title`, `Body`, `DataJSON`, `IsRead`, `CreatedAt`, `ReadAt`) VALUES
+(1, 2, 5, 'Pothole #5 status updated', 'Status changed from Reported to In Progress.', '{\"old_status\": \"Reported\", \"new_status\": \"In Progress\"}', 0, '2025-08-17 12:21:48', NULL),
+(2, 2, 2, 'Pothole #2 status updated', 'Status changed from Reported to Resolved.', '{\"old_status\": \"Reported\", \"new_status\": \"Resolved\"}', 0, '2025-08-17 12:21:51', NULL),
+(3, 2, 1, 'Pothole #1 status updated', 'Status changed from Reported to In Progress.', '{\"old_status\": \"Reported\", \"new_status\": \"In Progress\"}', 0, '2025-08-17 12:21:53', NULL);
 
 -- --------------------------------------------------------
 
@@ -108,11 +121,35 @@ CREATE TABLE `potholereport` (
 --
 
 INSERT INTO `potholereport` (`ReportID`, `UserID`, `Description`, `SeverityLevel`, `ImageURL`, `Timestamp`, `Status`, `ZipCode`, `Latitude`, `Longitude`) VALUES
-(1, 2, 'Minor surface-level pothole, requires monitoring.', 'Small', '/patchup_app/uploads/img_688349ef19485_5f36ec4c-ceb2-4a6d-9ab4-f8aa1901e7402753194180329228425.jpg', '2025-07-25 14:40:07', 'Reported', 100, 6.927100, 79.861200),
+(1, 2, 'Minor surface-level pothole, requires monitoring.', 'Small', '/patchup_app/uploads/img_688349ef19485_5f36ec4c-ceb2-4a6d-9ab4-f8aa1901e7402753194180329228425.jpg', '2025-07-25 14:40:07', 'In Progress', 100, 6.927100, 79.861200),
 (2, 2, 'Minor surface-level pothole, requires monitoring.', 'Small', '/patchup_app/uploads/img_688349ef19485_5f36ec4c-ceb2-4a6d-9ab4-f8aa1901e7402753194180329228425.jpg', '2025-07-25 14:50:46', 'Resolved', 40000, 9.661500, 80.025500),
-(3, 3, 'Medium-depth pothole, may damage vehicles if not repaired soon.', 'Moderate', '/patchup_app/uploads/img_688349ef19485_5f36ec4c-ceb2-4a6d-9ab4-f8aa1901e7402753194180329228425.jpg', '2025-07-25 14:50:46', 'In Progress', 31000, 8.587400, 81.215200),
+(3, 3, 'Medium-depth pothole, may damage vehicles if not repaired soon.', 'Moderate', '/patchup_app/uploads/img_688349ef19485_5f36ec4c-ceb2-4a6d-9ab4-f8aa1901e7402753194180329228425.jpg', '2025-07-25 14:50:46', 'Reported', 31000, 8.587400, 81.215200),
 (4, 3, 'Severe pothole posing a safety hazard, requires immediate attention.', 'Critical', '/patchup_app/uploads/img_688349ef19485_5f36ec4c-ceb2-4a6d-9ab4-f8aa1901e7402753194180329228425.jpg', '2025-07-25 14:50:46', 'Reported', 20000, 7.290600, 80.633700),
-(5, 4, 'Test Report', 'Critical', '/patchup_app/uploads/img_6886058655eb0_b58dc3e5-2d81-469b-8a9b-20082c70b8216753872652083309581.jpg', '2025-07-27 16:25:02', 'Resolved', 11320, 7.047544, 79.899375);
+(5, 2, 'Offline test 1', 'Critical', '/patchup_app/uploads/img_68970b25931a0_13816123-0893-4deb-8601-79223e9360c57178158823939428142.jpg', '2025-08-09 14:17:33', 'In Progress', 11320, 7.047546, 79.899443);
+
+--
+-- Triggers `potholereport`
+--
+DELIMITER $$
+CREATE TRIGGER `trg_pothole_status_notify` AFTER UPDATE ON `potholereport` FOR EACH ROW BEGIN
+  IF NEW.`Status` <> OLD.`Status` THEN
+    INSERT INTO `notification`
+      (`UserID`, `ReportID`, `Title`, `Body`, `DataJSON`)
+    VALUES
+      (
+        NEW.`UserID`,
+        NEW.`ReportID`,
+        CONCAT('Pothole #', NEW.`ReportID`, ' status updated'),
+        CONCAT('Status changed from ', OLD.`Status`, ' to ', NEW.`Status`, '.'),
+        JSON_OBJECT(
+          'old_status', OLD.`Status`,
+          'new_status', NEW.`Status`
+        )
+      );
+  END IF;
+END
+$$
+DELIMITER ;
 
 -- --------------------------------------------------------
 
@@ -180,7 +217,8 @@ ALTER TABLE `leaderboardentry`
 --
 ALTER TABLE `notification`
   ADD PRIMARY KEY (`NotificationID`),
-  ADD KEY `UserID` (`UserID`);
+  ADD KEY `idx_user_created` (`UserID`,`CreatedAt`),
+  ADD KEY `idx_report_created` (`ReportID`,`CreatedAt`);
 
 --
 -- Indexes for table `potholereport`
@@ -230,7 +268,7 @@ ALTER TABLE `leaderboardentry`
 -- AUTO_INCREMENT for table `notification`
 --
 ALTER TABLE `notification`
-  MODIFY `NotificationID` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `NotificationID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `potholereport`
@@ -264,7 +302,8 @@ ALTER TABLE `leaderboardentry`
 -- Constraints for table `notification`
 --
 ALTER TABLE `notification`
-  ADD CONSTRAINT `notification_ibfk_1` FOREIGN KEY (`UserID`) REFERENCES `user` (`UserID`);
+  ADD CONSTRAINT `fk_notification_report` FOREIGN KEY (`ReportID`) REFERENCES `potholereport` (`ReportID`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_notification_user` FOREIGN KEY (`UserID`) REFERENCES `user` (`UserID`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `potholereport`

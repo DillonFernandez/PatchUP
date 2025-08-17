@@ -5,7 +5,7 @@ include 'api/home_status.php';
 <html lang="en">
 
 <head>
-    <!-- Head Section: Meta, Styles, and Scripts -->
+    <!-- Section: Meta, Styles, and Scripts -->
     <meta charset="UTF-8">
     <title>Patch | Admin Dashboard</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -17,7 +17,7 @@ include 'api/home_status.php';
 
 <body class="bg-gray-100 min-h-screen flex relative">
 
-    <!-- Sidebar Navigation Section -->
+    <!-- Section: Sidebar Navigation -->
     <aside id="sidebar"
         class="w-64 bg-white shadow-md h-full md:h-screen fixed flex flex-col justify-between transform -translate-x-full md:translate-x-0 transition-transform duration-300 z-40 overflow-y-auto">
         <div>
@@ -52,13 +52,13 @@ include 'api/home_status.php';
         </form>
     </aside>
 
-    <!-- Mobile Sidebar Overlay Section -->
+    <!-- Section: Mobile Sidebar Overlay -->
     <div id="overlay" class="fixed inset-0 bg-black bg-opacity-50 hidden z-30 md:hidden"></div>
 
-    <!-- Main Content Section -->
+    <!-- Section: Main Content -->
     <main class="flex-1 md:ml-64 bg-gray-50 min-h-screen overflow-x-hidden">
 
-        <!-- Header Bar Section -->
+        <!-- Section: Header Bar -->
         <header class="bg-white px-6 py-4 flex items-center justify-between border-b shadow-sm">
             <button id="menuToggle" class="md:hidden text-[#04274B] focus:outline-none z-10">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -68,93 +68,93 @@ include 'api/home_status.php';
             <h1 class="text-xl md:text-2xl font-bold text-[#04274B] mx-auto md:mx-0 md:mb-1">Admin Dashboard</h1>
         </header>
 
-        <!-- Dashboard Content Section -->
+        <!-- Section: Dashboard Content -->
         <section class="px-[30px] py-[30px] md:p-10 space-y-[20px] md:space-y-10 max-w-7xl mx-auto">
 
-            <!-- Welcome Card Section -->
-            <div class="home-card home-shadow p-8 flex flex-col items-start justify-center text-left mb-2 bg-white border border-gray-100 relative overflow-hidden">
-                <h2 class="text-2xl md:text-3xl font-extrabold text-[#04274B] flex items-center gap-2 tracking-tight drop-shadow-sm">
+            <!-- Section: Welcome Card -->
+            <div class="home-card home-shadow p-8 flex flex-col items-start justify-center text-left mb-2 bg-white border border-gray-100 relative overflow-hidden rounded-[20px]">
+                <h2 class="text-2xl md:text-3xl font-extrabold text-[#04274B] flex items-center gap-2 tracking-tight drop-shadow-sm rounded-[15px]">
                     Welcome Back, <?= htmlspecialchars($_SESSION['admin_name']) ?>
-                    <span class="text-3xl">👋</span>
+                    <span class="text-3xl rounded-[10px]">👋</span>
                 </h2>
-                <p class="text-gray-600 text-base mt-2 font-medium">
+                <p class="text-gray-600 text-base mt-2 font-medium rounded-[15px]">
                     Here’s what’s happening with PatchUp today.
                 </p>
             </div>
 
-            <!-- Statistics Row Section -->
+            <!-- Section: Statistics Row -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-[20px] sm:gap-8">
-                <!-- Total Reports Card -->
-                <div class="home-card home-shadow p-8 flex flex-col items-center justify-center text-center relative overflow-hidden bg-white">
-                    <div class="absolute right-4 top-4 opacity-10 text-6xl pointer-events-none select-none">
-                        <span data-feather="alert-triangle" class="text-[#facc15]"></span>
+                <!-- Card: Total Reports -->
+                <div class="home-card home-shadow p-8 flex flex-col items-center justify-center text-center relative overflow-hidden bg-white rounded-[20px]">
+                    <div class="absolute right-4 top-4 opacity-10 text-6xl pointer-events-none select-none rounded-[15px]">
+                        <span data-feather="alert-triangle" class="text-[#facc15] rounded-[10px]"></span>
                     </div>
-                    <div class="flex items-center gap-3 mb-2 z-10">
-                        <span data-feather="alert-triangle" class="text-[#facc15]"></span>
-                        <h2 class="text-lg md:text-xl font-bold text-gray-700 home-section-title tracking-wide">
+                    <div class="flex items-center gap-3 mb-2 z-10 rounded-[15px]">
+                        <span data-feather="alert-triangle" class="text-[#facc15] rounded-[10px]"></span>
+                        <h2 class="text-lg md:text-xl font-bold text-gray-700 home-section-title tracking-wide rounded-[10px]">
                             Total Pothole Reports
                         </h2>
                     </div>
-                    <p class="text-5xl md:text-6xl font-extrabold text-[#04274B] mt-2 tracking-tight drop-shadow-sm z-10">
+                    <p class="text-5xl md:text-6xl font-extrabold text-[#04274B] mt-2 tracking-tight drop-shadow-sm z-10 rounded-[15px]">
                         <?= $totalReports ?>
                     </p>
                 </div>
-                <!-- Status Breakdown Chart Card -->
-                <div class="home-card home-shadow p-8 flex flex-col items-center justify-center text-center bg-white">
-                    <div class="flex items-center gap-2 mb-4">
-                        <span data-feather="pie-chart" class="text-[#3b82f6]"></span>
-                        <h3 class="text-lg font-semibold home-section-title tracking-wide">Status Breakdown</h3>
+                <!-- Card: Status Breakdown Chart -->
+                <div class="home-card home-shadow p-8 flex flex-col items-center justify-center text-center bg-white rounded-[20px]">
+                    <div class="flex items-center gap-2 mb-4 rounded-[15px]">
+                        <span data-feather="pie-chart" class="text-[#3b82f6] rounded-[10px]"></span>
+                        <h3 class="text-lg font-semibold home-section-title tracking-wide rounded-[10px]">Status Breakdown</h3>
                     </div>
-                    <div class="w-full flex justify-center">
-                        <canvas id="statusChart" class="mx-auto max-w-[220px]"></canvas>
+                    <div class="w-full flex justify-center rounded-[15px]">
+                        <canvas id="statusChart" class="mx-auto max-w-[220px] rounded-[10px]"></canvas>
                     </div>
                 </div>
-                <!-- Severity Breakdown Chart Card -->
-                <div class="home-card home-shadow p-8 flex flex-col items-center justify-center text-center bg-white">
-                    <div class="flex items-center gap-2 mb-4">
-                        <span data-feather="bar-chart-2" class="text-[#f87171]"></span>
-                        <h3 class="text-lg font-semibold home-section-title tracking-wide">Severity Breakdown</h3>
+                <!-- Card: Severity Breakdown Chart -->
+                <div class="home-card home-shadow p-8 flex flex-col items-center justify-center text-center bg-white rounded-[20px]">
+                    <div class="flex items-center gap-2 mb-4 rounded-[15px]">
+                        <span data-feather="bar-chart-2" class="text-[#f87171] rounded-[10px]"></span>
+                        <h3 class="text-lg font-semibold home-section-title tracking-wide rounded-[10px]">Severity Breakdown</h3>
                     </div>
-                    <div class="w-full flex justify-center">
-                        <canvas id="severityChart" class="mx-auto max-w-[220px]"></canvas>
+                    <div class="w-full flex justify-center rounded-[15px]">
+                        <canvas id="severityChart" class="mx-auto max-w-[220px] rounded-[10px]"></canvas>
                     </div>
                 </div>
             </div>
 
-            <!-- Top Users and Latest Reports Section -->
+            <!-- Section: Top Users and Latest Reports -->
             <div class="grid md:grid-cols-2 gap-[20px] md:gap-8">
-                <!-- Top 5 Reporters Card -->
-                <div class="home-card home-shadow p-6 bg-white flex flex-col">
-                    <div class="flex items-center gap-2 mb-4">
-                        <span data-feather="award" class="text-[#10b981]"></span>
-                        <h3 class="text-lg font-semibold home-section-title tracking-wide">Top 5 Reporters</h3>
+                <!-- Card: Top 5 Reporters -->
+                <div class="home-card home-shadow p-6 bg-white flex flex-col rounded-[20px]">
+                    <div class="flex items-center gap-2 mb-4 rounded-[15px]">
+                        <span data-feather="award" class="text-[#10b981] rounded-[10px]"></span>
+                        <h3 class="text-lg font-semibold home-section-title tracking-wide rounded-[10px]">Top 5 Reporters</h3>
                     </div>
-                    <ul class="space-y-3">
+                    <ul class="space-y-3 rounded-[15px]">
                         <?php while ($row = $topUsers->fetch_assoc()) { ?>
-                            <li class="flex justify-between items-center px-4 py-3 rounded-lg bg-gray-100">
-                                <span class="font-medium text-gray-700 text-base"><?= htmlspecialchars($row['Name']) ?></span>
-                                <span class="home-badge"><?= $row['totalReports'] ?> reports</span>
+                            <li class="flex justify-between items-center px-4 py-3 bg-gray-100 rounded-[10px]">
+                                <span class="font-medium text-gray-700 text-base rounded-[10px]"><?= htmlspecialchars($row['Name']) ?></span>
+                                <span class="home-badge rounded-[10px]"><?= $row['totalReports'] ?> reports</span>
                             </li>
                         <?php } ?>
                     </ul>
                 </div>
 
-                <!-- Latest Reports Card -->
-                <div class="home-card home-shadow p-6 bg-white flex flex-col">
-                    <div class="flex items-center gap-2 mb-4">
-                        <span data-feather="clock" class="text-[#60a5fa]"></span>
-                        <h3 class="text-lg font-semibold home-section-title tracking-wide">Latest Reports</h3>
+                <!-- Card: Latest Reports -->
+                <div class="home-card home-shadow p-6 bg-white flex flex-col rounded-[20px]">
+                    <div class="flex items-center gap-2 mb-4 rounded-[15px]">
+                        <span data-feather="clock" class="text-[#60a5fa] rounded-[10px]"></span>
+                        <h3 class="text-lg font-semibold home-section-title tracking-wide rounded-[10px]">Latest Reports</h3>
                     </div>
-                    <ul class="space-y-4">
+                    <ul class="space-y-4 rounded-[15px]">
                         <?php while ($row = $latestReports->fetch_assoc()) { ?>
-                            <li class="flex items-center space-x-4 px-3 py-3 rounded-lg bg-gray-100">
+                            <li class="flex items-center space-x-4 px-3 py-3 bg-gray-100 rounded-[10px]">
                                 <img src="<?= htmlspecialchars($row['ImageURL']) ?>"
-                                    class="w-14 h-14 rounded-lg object-cover home-avatar shadow">
-                                <div>
-                                    <p class="text-base font-semibold text-gray-800 leading-tight"><?= htmlspecialchars($row['Description']) ?>
+                                    class="w-14 h-14 object-cover home-avatar shadow rounded-[10px]">
+                                <div class="rounded-[10px]">
+                                    <p class="text-base font-semibold text-gray-800 leading-tight rounded-[10px]"><?= htmlspecialchars($row['Description']) ?>
                                     </p>
-                                    <p class="text-xs text-gray-500 mt-1"><?= htmlspecialchars($row['Name']) ?> •
-                                        <span class="font-medium"><?= $row['Status'] ?></span>
+                                    <p class="text-xs text-gray-500 mt-1 rounded-[10px]"><?= htmlspecialchars($row['Name']) ?> •
+                                        <span class="font-medium rounded-[10px]"><?= $row['Status'] ?></span>
                                     </p>
                                 </div>
                             </li>
@@ -166,23 +166,23 @@ include 'api/home_status.php';
         </section>
     </main>
 
-    <!-- Sidebar Toggle Script Section -->
+    <!-- Section: Sidebar Toggle Script -->
     <script src="javascript/script.js"></script>
     <script>
         feather.replace();
     </script>
 
-    <!-- Chart.js Script Section -->
+    <!-- Section: Chart.js Scripts -->
     <script>
-        // --- Prepare Data for Status Chart ---
+        // Section: Prepare Data for Status Chart
         const statusData = <?= json_encode(array_values($statusData)) ?>;
         const statusLabels = <?= json_encode(array_keys($statusData)) ?>;
 
-        // --- Prepare Data for Severity Chart ---
+        // Section: Prepare Data for Severity Chart
         const severityData = <?= json_encode(array_values($severityData)) ?>;
         const severityLabels = <?= json_encode(array_keys($severityData)) ?>;
 
-        // --- Render Status Pie Chart ---
+        // Section: Render Status Pie Chart
         new Chart(document.getElementById('statusChart'), {
             type: 'pie',
             data: {
@@ -208,7 +208,7 @@ include 'api/home_status.php';
             }
         });
 
-        // --- Render Severity Doughnut Chart ---
+        // Section: Render Severity Doughnut Chart
         new Chart(document.getElementById('severityChart'), {
             type: 'doughnut',
             data: {

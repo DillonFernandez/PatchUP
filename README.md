@@ -21,33 +21,53 @@ PatchUp is a modern, user-friendly platform empowering Sri Lankan citizens to re
 
 ---
 
-## ✨ Features
+## ✨ Features Roadmap
 
-### 📱 Mobile App (Citizen Users)
+### 🏁 Sprint 1: Foundation & Basic Reporting
 
-- **User Authentication**: Secure login & sign-up.
-- **GPS Location Integration**: Auto-detects pothole locations.
-- **Pothole Reporting**:
-  - Take/upload photos
-  - Add descriptions
-  - Location auto-captured
-- **Interactive Map View**:
-  - View nearby potholes
-  - Filter by status: _Reported_, _Acknowledged_, _Fixed_
-  - Danger level: _Small_, _Moderate_, _Critical_
-- **Report Status Tracking**: Track your report’s progress.
-- **Heatmap Visualization**: See pothole density & severity.
+**Prerequisite Features**
 
-### 🖥️ Web Dashboard (Authorities)
+- **User Authentication & Authorization**: Secure login & sign-up for tracking, syncing, and notifications.
+- **GPS Location Integration**: Auto-detects pothole locations, used across map, heatmap, and routing.
 
-- **Secure Login**: For authorized personnel only.
-- **Dashboard**:
-  - View citizen reports with GPS & photos
-  - Change report statuses (_Reported → Acknowledged → Fixed_)
-  - Efficient case management
-- **Analytics & Insights**: Data-driven decision-making
+**Core Features**
 
-> ⚠️ _Note: The web dashboard does **not** include auto-routing or heatmap visualization._
+- **Pothole Reporting**: Capture and submit potholes with photo, description, and GPS location.
+
+---
+
+### 🗺️ Sprint 2: Mapping, Tracking & Authority Handling
+
+**Prerequisite Features**
+
+- **Interactive Map View**: Visualize potholes spatially for both users and authorities.
+- **Filter by Report Status**: Filter potholes by _Reported_, _Acknowledged_, _Fixed_.
+
+**Core Features**
+
+- **Report Status Tracking**: Track progress from submission to fix.
+- **Heatmap Visualization**: View pothole density and severity.
+- **Danger Level Categorization**: Mark potholes as _Small_, _Moderate_, or _Critical_.
+- **Local Authority Dashboard**: Municipalities can receive and manage reports (no auto-routing yet).
+- **Mobile Notifications**: Get notified on status updates.
+- **Offline Reporting with Auto-Sync**: Report potholes without internet; syncs when online.
+- **Multilingual Interface**: Sinhala, Tamil, and English support.
+
+---
+
+### 🚧 More to Come (Sprint 3+)
+
+#### Sprint 3: Community, Gamification & Analytics
+
+**Prerequisite Features**
+
+- **Upvote / Confirm Reports**: Community validation and prioritization.
+- **Gamification Engine**: Points, badges, and leaderboards for engagement.
+
+**Core Features**
+
+- **Road Condition Rating**: Crowdsourced road quality index for planning.
+- **AI Pothole Verification**: Camera-based AI checks if the image is a pothole before submission.
 
 ---
 
@@ -80,9 +100,11 @@ PatchUp is a modern, user-friendly platform empowering Sri Lankan citizens to re
 ## 🌱 Future Plans
 
 - Public launch & expansion beyond Sri Lanka
-- Offline reporting with auto-sync
+- Advanced analytics & insights
 - Gamification: leaderboards, badges
-- Multilingual: Sinhala, Tamil, English
+- AI-powered pothole detection & verification
+- Crowdsourced road condition ratings
+- More community engagement features
 
 ---
 

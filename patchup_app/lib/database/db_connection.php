@@ -1,14 +1,14 @@
 <?php
-// --- Database Connection Configuration ---
+// Database connection configuration
 $host = "localhost";
 $user = "root";
 $password = "";
 $dbname = "patchup";
 
-// --- Create Database Connection ---
+// Create database connection
 $conn = new mysqli($host, $user, $password, $dbname);
 
-// --- Check for Connection Errors ---
+// Check for connection errors
 if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }

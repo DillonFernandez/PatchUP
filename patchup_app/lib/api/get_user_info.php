@@ -1,31 +1,31 @@
 <?php
-// --- Set JSON Response Header and Include Database Connection ---
+// Set response type to JSON and include database connection
 header("Content-Type: application/json");
 include_once("../database/db_connection.php");
 
-// --- Decode Input JSON and Extract Email ---
+// Parse input and extract email
 $data = json_decode(file_get_contents("php://input"), true);
 $email = $data["Email"] ?? '';
 
-// --- Check if Email is Provided, Return Empty Values if Not ---
+// Validate email input, return empty values if missing
 if (!$email) {
     echo json_encode(["name" => "", "email" => ""]);
     exit;
 }
 
-// --- Prepare and Execute SQL Query to Fetch User Name and Email by Email ---
+// Query to fetch user name and email by email
 $stmt = $conn->prepare("SELECT Name, Email FROM user WHERE LOWER(Email) = LOWER(?)");
 $stmt->bind_param("s", $email);
 $stmt->execute();
 $stmt->bind_result($name, $emailResult);
 
-// --- Return User Info if Found, Otherwise Return Empty Values ---
+// Output user info if found, otherwise return empty values
 if ($stmt->fetch()) {
     echo json_encode(["name" => $name, "email" => $emailResult]);
 } else {
     echo json_encode(["name" => "", "email" => ""]);
 }
 
-// --- Close Statement and Database Connection ---
+// Close statement and database connection
 $stmt->close();
 $conn->close();

@@ -1,10 +1,10 @@
 <?php
-// --- Start Session and Clear All Session Data ---
+// Section: Session Start and Clear Session Data
 session_start();
 $_SESSION = [];
 session_unset();
 session_destroy();
 
-// --- Redirect to Login Page After Logout ---
+// Section: Redirect to Login Page
 header("Location: login.php");
 exit;

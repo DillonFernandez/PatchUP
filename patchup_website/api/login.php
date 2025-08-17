@@ -1,29 +1,29 @@
 <?php
-// --- Set JSON Response Header ---
+// Set response type to JSON
 header('Content-Type: application/json');
 
-// --- Database Connection ---
+// Include database connection
 require_once("../database/db_connection.php");
 
-// --- Retrieve and Sanitize Input ---
+// Get and sanitize POST input
 $name = trim($_POST['name'] ?? '');
 $email = trim($_POST['email'] ?? '');
 $password = $_POST['password'] ?? '';
 
-// --- Validate Required Fields ---
+// Check for missing required fields
 if (!$name || !$email || !$password) {
     echo json_encode(['success' => false, 'message' => 'All fields are required.']);
     exit;
 }
 
-// --- Prepare and Execute SQL to Fetch Admin User ---
+// Query admin table for matching user
 $stmt = $conn->prepare("SELECT * FROM admin WHERE Name=? AND Email=?");
 $stmt->bind_param("ss", $name, $email);
 $stmt->execute();
 $result = $stmt->get_result();
 $user = $result->fetch_assoc();
 
-// --- Verify Credentials and Handle Login ---
+// Validate credentials and start session if successful
 if ($user && $user['PasswordHash'] === $password) {
     session_start();
     session_regenerate_id(true);
@@ -34,6 +34,6 @@ if ($user && $user['PasswordHash'] === $password) {
     echo json_encode(['success' => false, 'message' => 'Invalid credentials.']);
 }
 
-// --- Close Statement and Database Connection ---
+// Clean up statement and database connection
 $stmt->close();
 $conn->close();

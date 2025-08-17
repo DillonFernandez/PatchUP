@@ -4,9 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 import '../components/appbar.dart';
+import '../localization/app_localizations.dart';
 import 'report.dart';
 
-// --- Fetch Recent Reports from API ---
+// Fetch recent reports for home page
 Future<List<Map<String, dynamic>>> fetchReports() async {
   final response = await http.get(
     Uri.parse(
@@ -20,13 +21,13 @@ Future<List<Map<String, dynamic>>> fetchReports() async {
   return [];
 }
 
-// --- Home Page Widget ---
+// Home page widget with stats and recent reports
 class HomePage extends StatelessWidget {
   final void Function()? goToReportTab;
 
   const HomePage({super.key, this.goToReportTab});
 
-  // --- Fetch Home Page Statistics from API ---
+  // Fetch home statistics from backend
   Future<Map<String, dynamic>> fetchHomeStats() async {
     final response = await http.get(
       Uri.parse('http://192.168.1.100/patchup_app/lib/api/home_stats.php'),
@@ -41,6 +42,7 @@ class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final appLoc = AppLocalizations.of(context);
     return Scaffold(
       appBar: const UserAppBar(),
       backgroundColor: Colors.white,
@@ -49,7 +51,6 @@ class HomePage extends StatelessWidget {
         child: SingleChildScrollView(
           child: Column(
             children: [
-              // --- Welcome Card Section ---
               Container(
                 width: double.infinity,
                 decoration: BoxDecoration(
@@ -108,7 +109,7 @@ class HomePage extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                "Welcome to PatchUp!",
+                                appLoc.translate("Welcome to PatchUp!"),
                                 style: theme.textTheme.titleLarge?.copyWith(
                                   fontWeight: FontWeight.w800,
                                   fontSize: 22,
@@ -118,7 +119,7 @@ class HomePage extends StatelessWidget {
                               ),
                               const SizedBox(height: 6),
                               Text(
-                                "Your city, your reports. Stay updated and help improve your community.",
+                                appLoc.translate("Home Subtitle"),
                                 style: theme.textTheme.bodyMedium?.copyWith(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w500,
@@ -135,12 +136,10 @@ class HomePage extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 26),
-              // --- Statistics Cards Section ---
               FutureBuilder<Map<String, dynamic>>(
                 future: fetchHomeStats(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    // --- Loading State for Stats Cards ---
                     return Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: List.generate(
@@ -188,19 +187,23 @@ class HomePage extends StatelessWidget {
                       ),
                     );
                   } else if (snapshot.hasError) {
-                    // --- Error State for Stats Cards ---
                     return Padding(
                       padding: const EdgeInsets.symmetric(vertical: 18),
-                      child: Text(
-                        'Failed to load stats',
-                        style: TextStyle(
-                          color: Colors.red,
-                          fontWeight: FontWeight.w600,
+                      child: Center(
+                        child: Text(
+                          appLoc.translate(
+                            'Currently offline. Will sync when back online.',
+                          ),
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.blueGrey[400],
+                            fontWeight: FontWeight.w500,
+                          ),
+                          textAlign: TextAlign.center,
                         ),
                       ),
                     );
                   } else {
-                    // --- Loaded Stats Cards ---
                     final stats = snapshot.data!;
                     return Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -208,7 +211,7 @@ class HomePage extends StatelessWidget {
                         Expanded(
                           child: _StatCard(
                             icon: Icons.people,
-                            label: "Users",
+                            label: appLoc.translate("Users"),
                             value: stats['total_users'].toString(),
                             color: Colors.blue[700]!,
                           ),
@@ -217,7 +220,7 @@ class HomePage extends StatelessWidget {
                         Expanded(
                           child: _StatCard(
                             icon: Icons.bar_chart,
-                            label: "Avg/Day",
+                            label: appLoc.translate("Avg/Day"),
                             value: stats['avg_reports_per_day'].toString(),
                             color: Colors.orange[700]!,
                           ),
@@ -226,7 +229,7 @@ class HomePage extends StatelessWidget {
                         Expanded(
                           child: _StatCard(
                             icon: Icons.check_circle,
-                            label: "Resolved",
+                            label: appLoc.translate("Resolved"),
                             value: stats['potholes_resolved'].toString(),
                             color: Colors.green[700]!,
                           ),
@@ -237,7 +240,6 @@ class HomePage extends StatelessWidget {
                 },
               ),
               const SizedBox(height: 35),
-              // --- Divider with Recent Reports Icon ---
               Row(
                 children: [
                   Expanded(
@@ -262,7 +264,7 @@ class HomePage extends StatelessWidget {
                         ),
                         const SizedBox(width: 7),
                         Text(
-                          'Recent Reports',
+                          appLoc.translate('Recent Reports'),
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w800,
@@ -283,12 +285,10 @@ class HomePage extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 20),
-              // --- Recent Reports List Section ---
               FutureBuilder<List<Map<String, dynamic>>>(
                 future: fetchReports(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    // --- Loading State for Reports List ---
                     return Padding(
                       padding: const EdgeInsets.symmetric(vertical: 32),
                       child: Center(
@@ -300,22 +300,23 @@ class HomePage extends StatelessWidget {
                   }
                   final reports = snapshot.data ?? [];
                   if (reports.isEmpty) {
-                    // --- No Reports Found State ---
                     return Padding(
                       padding: const EdgeInsets.symmetric(vertical: 32),
                       child: Center(
                         child: Text(
-                          'No recent reports found.',
+                          appLoc.translate(
+                            'Currently offline. Will sync when back online.',
+                          ),
                           style: TextStyle(
                             fontSize: 16,
                             color: Colors.blueGrey[400],
                             fontWeight: FontWeight.w500,
                           ),
+                          textAlign: TextAlign.center,
                         ),
                       ),
                     );
                   }
-                  // --- List of Recent Reports ---
                   return ListView.separated(
                     shrinkWrap: true,
                     physics: NeverScrollableScrollPhysics(),
@@ -332,7 +333,6 @@ class HomePage extends StatelessWidget {
           ),
         ),
       ),
-      // --- Floating Action Button for New Report ---
       floatingActionButton: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(50),
@@ -354,7 +354,7 @@ class HomePage extends StatelessWidget {
           backgroundColor: const Color(0xFF04274B),
           child: const Icon(Icons.add, color: Colors.white, size: 34),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(50),
+            borderRadius: BorderRadius.circular(20),
           ),
           elevation: 0,
         ),
@@ -363,7 +363,7 @@ class HomePage extends StatelessWidget {
   }
 }
 
-// --- Statistics Card Widget ---
+// Widget for displaying a single stat card
 class _StatCard extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -406,7 +406,6 @@ class _StatCard extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // --- Icon Section ---
               Container(
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
@@ -423,7 +422,6 @@ class _StatCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
-              // --- Value Section ---
               Text(
                 value,
                 style: TextStyle(
@@ -433,7 +431,6 @@ class _StatCard extends StatelessWidget {
                   letterSpacing: 0.1,
                 ),
               ),
-              // --- Label Section ---
               Text(
                 label,
                 style: TextStyle(
@@ -451,14 +448,100 @@ class _StatCard extends StatelessWidget {
   }
 }
 
-// --- Report Card Widget for Recent Reports ---
+// Widget for displaying a single report card
 class _ReportCard extends StatelessWidget {
   final Map<String, dynamic> report;
 
   const _ReportCard({required this.report});
 
+  Color _severityBgColor(String? severity) {
+    switch (severity) {
+      case 'Critical':
+        return Colors.red[100]!;
+      case 'Moderate':
+        return Colors.yellow[100]!;
+      case 'Small':
+        return Colors.green[100]!;
+      default:
+        return Colors.grey[200]!;
+    }
+  }
+
+  Color _severityIconColor(String? severity) {
+    switch (severity) {
+      case 'Critical':
+        return Colors.red;
+      case 'Moderate':
+        return Colors.orange[700]!;
+      case 'Small':
+        return Colors.green;
+      default:
+        return Colors.orange[700]!;
+    }
+  }
+
+  Color _severityTextColor(String? severity) {
+    switch (severity) {
+      case 'Critical':
+        return Colors.red[900]!;
+      case 'Moderate':
+        return Colors.orange[900]!;
+      case 'Small':
+        return Colors.green[900]!;
+      default:
+        return Colors.black;
+    }
+  }
+
+  Color _statusBgColor(String? status) {
+    final s = (status ?? '').toString().toLowerCase().trim();
+    if (s == 'resolved' || s == 'resolved.' || s == 'resolved!') {
+      return Colors.green[100]!;
+    } else if (s == 'in progress' || s == 'in progress...') {
+      return Colors.yellow[100]!;
+    }
+    return Colors.blue[50]!;
+  }
+
+  Color _statusIconColor(String? status) {
+    final s = (status ?? '').toString().toLowerCase().trim();
+    if (s == 'resolved' || s == 'resolved.' || s == 'resolved!') {
+      return Colors.green[700]!;
+    } else if (s == 'in progress' || s == 'in progress...') {
+      return Colors.orange[700]!;
+    }
+    return Colors.blue[700]!;
+  }
+
+  Color _statusTextColor(String? status) {
+    final s = (status ?? '').toString().toLowerCase().trim();
+    if (s == 'resolved' || s == 'resolved.' || s == 'resolved!') {
+      return Colors.green[900]!;
+    } else if (s == 'in progress' || s == 'in progress...') {
+      return Colors.orange[900]!;
+    }
+    return Colors.black;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final appLoc = AppLocalizations.of(context);
+    String? severity = report['SeverityLevel'];
+    String? status = report['Status'];
+    // Normalize for translation
+    String? severityKey =
+        severity != null
+            ? ['Critical', 'Moderate', 'Small'].contains(severity)
+                ? severity
+                : null
+            : null;
+    String? statusKey =
+        status != null
+            ? ['In Progress', 'Resolved', 'Reported'].contains(status)
+                ? status
+                : null
+            : null;
+
     return AnimatedContainer(
       duration: Duration(milliseconds: 220),
       curve: Curves.easeInOut,
@@ -493,10 +576,9 @@ class _ReportCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // --- Top Row: Severity and Status ---
                   Row(
                     children: [
-                      if (report['SeverityLevel'] != null)
+                      if (severity != null)
                         Expanded(
                           child: Container(
                             padding: EdgeInsets.symmetric(
@@ -507,7 +589,7 @@ class _ReportCard extends StatelessWidget {
                               right: report['Status'] != null ? 8 : 0,
                             ),
                             decoration: BoxDecoration(
-                              color: Colors.orange[50],
+                              color: _severityBgColor(report['SeverityLevel']),
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Row(
@@ -515,23 +597,23 @@ class _ReportCard extends StatelessWidget {
                               children: [
                                 Icon(
                                   Icons.warning_amber_rounded,
-                                  color: Colors.orange[700],
+                                  color: _severityIconColor(severity),
                                   size: 17,
                                 ),
                                 const SizedBox(width: 5),
                                 Text(
-                                  '${report['SeverityLevel']}',
+                                  appLoc.translate(severityKey ?? severity),
                                   style: TextStyle(
                                     fontSize: 13.5,
                                     fontWeight: FontWeight.w700,
-                                    color: Colors.orange[900],
+                                    color: _severityTextColor(severity),
                                   ),
                                 ),
                               ],
                             ),
                           ),
                         ),
-                      if (report['Status'] != null)
+                      if (status != null)
                         Expanded(
                           child: Container(
                             padding: EdgeInsets.symmetric(
@@ -539,7 +621,7 @@ class _ReportCard extends StatelessWidget {
                               vertical: 6,
                             ),
                             decoration: BoxDecoration(
-                              color: Colors.blue[50],
+                              color: _statusBgColor(report['Status']),
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Row(
@@ -547,16 +629,16 @@ class _ReportCard extends StatelessWidget {
                               children: [
                                 Icon(
                                   Icons.info_outline,
-                                  color: Colors.blue[700],
+                                  color: _statusIconColor(status),
                                   size: 17,
                                 ),
                                 const SizedBox(width: 5),
                                 Text(
-                                  '${report['Status']}',
+                                  appLoc.translate(statusKey ?? status),
                                   style: TextStyle(
                                     fontSize: 13.5,
                                     fontWeight: FontWeight.w700,
-                                    color: Colors.blue[900],
+                                    color: _statusTextColor(status),
                                   ),
                                 ),
                               ],
@@ -566,11 +648,9 @@ class _ReportCard extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  // --- Main Content Row: Image and Details ---
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // --- Image Section ---
                       report['ImageURL'] != null &&
                               report['ImageURL'].toString().isNotEmpty
                           ? ClipRRect(
@@ -604,12 +684,10 @@ class _ReportCard extends StatelessWidget {
                             ),
                           ),
                       const SizedBox(width: 22),
-                      // --- Details Section ---
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // --- Location Row ---
                             Row(
                               children: [
                                 Icon(
@@ -632,7 +710,6 @@ class _ReportCard extends StatelessWidget {
                               ],
                             ),
                             const SizedBox(height: 8),
-                            // --- ZipCode Row ---
                             if (report['ZipCode'] != null &&
                                 report['ZipCode'].toString().isNotEmpty)
                               Row(
@@ -653,7 +730,6 @@ class _ReportCard extends StatelessWidget {
                                   ),
                                 ],
                               ),
-                            // --- Timestamp Row ---
                             if (report['Timestamp'] != null &&
                                 report['Timestamp'].toString().isNotEmpty)
                               Padding(
@@ -677,7 +753,6 @@ class _ReportCard extends StatelessWidget {
                                   ],
                                 ),
                               ),
-                            // --- User Row ---
                             Padding(
                               padding: const EdgeInsets.only(top: 8),
                               child: Row(
@@ -689,7 +764,7 @@ class _ReportCard extends StatelessWidget {
                                   ),
                                   const SizedBox(width: 6),
                                   Text(
-                                    '${report['UserName'] ?? 'Unknown'}',
+                                    '${report['UserName'] ?? appLoc.translate('Unknown')}',
                                     style: TextStyle(
                                       fontSize: 13.5,
                                       fontWeight: FontWeight.w600,
@@ -704,7 +779,6 @@ class _ReportCard extends StatelessWidget {
                       ),
                     ],
                   ),
-                  // --- Description Section ---
                   const SizedBox(height: 18),
                   Container(
                     width: double.infinity,
@@ -714,7 +788,8 @@ class _ReportCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
-                      report['Description'] ?? 'No description',
+                      report['Description'] ??
+                          appLoc.translate('No description'),
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,

@@ -1,21 +1,21 @@
 <?php
-// --- Start Session and Set JSON Header ---
+// Start session and set JSON response header
 session_start();
 header('Content-Type: application/json');
 
-// --- Admin Authentication Check ---
+// Verify admin authentication
 if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
     echo json_encode(['success' => false, 'message' => 'Unauthorized']);
     exit;
 }
 
-// --- Database Connection ---
+// Connect to database
 require_once "../database/db_connection.php";
 
-// --- Get Action Parameter ---
+// Get action parameter from request
 $action = $_GET['action'] ?? '';
 
-// --- List All Customers ---
+// Handle listing all customers
 if ($action === 'list') {
     $customers = [];
     $result = $conn->query("SELECT UserID, Name, Email, Points FROM user ORDER BY UserID ASC");
@@ -26,7 +26,7 @@ if ($action === 'list') {
     exit;
 }
 
-// --- List Reports for a Specific Customer ---
+// Handle listing reports for a specific customer
 if ($action === 'reports' && isset($_GET['userid'])) {
     $userid = intval($_GET['userid']);
     $reports = [];
@@ -41,5 +41,5 @@ if ($action === 'reports' && isset($_GET['userid'])) {
     exit;
 }
 
-// --- Handle Invalid Action ---
+// Handle invalid action requests
 echo json_encode(['success' => false, 'message' => 'Invalid action']);

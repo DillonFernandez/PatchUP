@@ -1,12 +1,12 @@
 <?php
-// --- Include Database Connection ---
+// Database connection
 require_once("../database/db_connection.php");
 
-// --- Decode Input JSON and Extract User Email if Provided ---
+// Parse input and extract user email if present
 $input = json_decode(file_get_contents('php://input'), true);
 $userEmail = isset($input['UserEmail']) ? $input['UserEmail'] : null;
 
-// --- Prepare and Execute SQL Query Based on Presence of User Email ---
+// Build and execute SQL query based on user email presence
 if ($userEmail) {
     $stmt = $conn->prepare(
         "SELECT p.Latitude, p.Longitude, p.SeverityLevel
@@ -21,7 +21,7 @@ if ($userEmail) {
     $result = $conn->query("SELECT Latitude, Longitude, SeverityLevel FROM potholereport WHERE Latitude IS NOT NULL AND Longitude IS NOT NULL");
 }
 
-// --- Collect Query Results into an Array for Heatmap ---
+// Collect query results into array for heatmap
 $reports = [];
 while ($row = $result->fetch_assoc()) {
     $reports[] = [
@@ -31,9 +31,9 @@ while ($row = $result->fetch_assoc()) {
     ];
 }
 
-// --- Close Database Connection ---
+// Close database connection
 $conn->close();
 
-// --- Set Response Header and Output Heatmap Points as JSON ---
+// Set response type to JSON and output heatmap points
 header('Content-Type: application/json');
 echo json_encode($reports);

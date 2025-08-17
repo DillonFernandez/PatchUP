@@ -1,21 +1,21 @@
 <?php
-// --- Start Session and Set JSON Header ---
+// Start session and set JSON response header
 session_start();
 header('Content-Type: application/json');
 
-// --- Admin Authentication Check ---
+// Verify admin authentication
 if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
     echo json_encode(['success' => false, 'message' => 'Unauthorized']);
     exit;
 }
 
-// --- Database Connection ---
+// Connect to database
 require_once "../database/db_connection.php";
 
-// --- Get Action Parameter ---
+// Get action parameter from request
 $action = $_GET['action'] ?? '';
 
-// --- List All Admins ---
+// Handle admin listing
 if ($action === 'list') {
     $admins = [];
     $current_email = $_SESSION['admin_email'] ?? '';
@@ -28,25 +28,25 @@ if ($action === 'list') {
     exit;
 }
 
-// --- Add New Admin ---
+// Handle adding a new admin
 if ($action === 'add') {
     $name = trim($_POST['name'] ?? '');
     $email = trim($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
 
-    // --- Validate Name Format ---
+    // Validate admin name format
     if (!$name || !preg_match("/^[a-zA-Z][a-zA-Z\s'-]{1,99}$/", $name)) {
         echo json_encode(["success" => false, "message" => "Invalid name format"]);
         exit;
     }
 
-    // --- Validate Email Format ---
+    // Validate admin email format
     if (!$email || !preg_match("/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/", $email)) {
         echo json_encode(["success" => false, "message" => "Invalid email format"]);
         exit;
     }
 
-    // --- Check for Existing Email (Case-Insensitive) ---
+    // Check for existing email (case-insensitive)
     $stmt = $conn->prepare("SELECT 1 FROM admin WHERE LOWER(Email) = LOWER(?)");
     $stmt->bind_param("s", $email);
     $stmt->execute();
@@ -58,7 +58,7 @@ if ($action === 'add') {
     }
     $stmt->close();
 
-    // --- Validate Password Strength and Format ---
+    // Validate password strength and format
     if (
         !$password ||
         strlen($password) < 8 ||
@@ -71,7 +71,7 @@ if ($action === 'add') {
         exit;
     }
 
-    // --- Check Password Against Common Passwords Denylist ---
+    // Check password against common passwords denylist
     $common_passwords = [
         "password",
         "123456",
@@ -89,7 +89,7 @@ if ($action === 'add') {
         exit;
     }
 
-    // --- Insert New Admin Record ---
+    // Insert new admin record
     $stmt = $conn->prepare("INSERT INTO admin (Name, Email, PasswordHash) VALUES (?, ?, ?)");
     $stmt->bind_param("sss", $name, $email, $password);
     if ($stmt->execute()) {
@@ -101,14 +101,14 @@ if ($action === 'add') {
     exit;
 }
 
-// --- Delete Admin ---
+// Handle deleting an admin
 if ($action === 'delete') {
     $id = intval($_POST['id'] ?? 0);
     if (!$id) {
         echo json_encode(['success' => false, 'message' => 'Invalid admin ID.']);
         exit;
     }
-    // --- Prevent Deleting Self ---
+    // Prevent deleting self
     $stmt = $conn->prepare("SELECT Email FROM admin WHERE AdminID=?");
     $stmt->bind_param("i", $id);
     $stmt->execute();
@@ -123,7 +123,7 @@ if ($action === 'delete') {
         echo json_encode(['success' => false, 'message' => 'You cannot delete yourself.']);
         exit;
     }
-    // --- Delete Admin Record ---
+    // Delete admin record
     $stmt = $conn->prepare("DELETE FROM admin WHERE AdminID=?");
     $stmt->bind_param("i", $id);
     if ($stmt->execute()) {
@@ -135,7 +135,7 @@ if ($action === 'delete') {
     exit;
 }
 
-// --- Edit Admin ---
+// Handle editing an admin
 if ($action === 'edit') {
     $id = intval($_POST['id'] ?? 0);
     $name = trim($_POST['name'] ?? '');
@@ -147,19 +147,19 @@ if ($action === 'edit') {
         exit;
     }
 
-    // --- Validate Name Format ---
+    // Validate admin name format
     if (!$name || !preg_match("/^[a-zA-Z][a-zA-Z\s'-]{1,99}$/", $name)) {
         echo json_encode(["success" => false, "message" => "Invalid name format"]);
         exit;
     }
 
-    // --- Validate Email Format ---
+    // Validate admin email format
     if (!$email || !preg_match("/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/", $email)) {
         echo json_encode(["success" => false, "message" => "Invalid email format"]);
         exit;
     }
 
-    // --- Check for Existing Email (Case-Insensitive, Excluding Self) ---
+    // Check for existing email (case-insensitive, excluding self)
     $stmt = $conn->prepare("SELECT 1 FROM admin WHERE LOWER(Email) = LOWER(?) AND AdminID != ?");
     $stmt->bind_param("si", $email, $id);
     $stmt->execute();
@@ -171,7 +171,7 @@ if ($action === 'edit') {
     }
     $stmt->close();
 
-    // --- If Password Provided, Validate and Update ---
+    // If password provided, validate and update
     if ($password) {
         if (
             strlen($password) < 8 ||
@@ -199,11 +199,11 @@ if ($action === 'edit') {
             echo json_encode(["success" => false, "message" => "Password is too common"]);
             exit;
         }
-        // --- Update Admin With Password ---
+        // Update admin with password
         $stmt = $conn->prepare("UPDATE admin SET Name=?, Email=?, PasswordHash=? WHERE AdminID=?");
         $stmt->bind_param("sssi", $name, $email, $password, $id);
     } else {
-        // --- Update Admin Without Password ---
+        // Update admin without password
         $stmt = $conn->prepare("UPDATE admin SET Name=?, Email=? WHERE AdminID=?");
         $stmt->bind_param("ssi", $name, $email, $id);
     }

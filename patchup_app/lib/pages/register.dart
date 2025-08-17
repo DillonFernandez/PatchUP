@@ -6,10 +6,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../components/appbar.dart' show UserSession;
 import '../components/bottonnav.dart';
+import '../localization/app_localizations.dart';
 import '../main.dart';
 import 'login.dart';
+import 'terms_conditions.dart';
 
-// --- Registration Page Widget ---
+// Register page widget for user sign up
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
 
@@ -17,15 +19,14 @@ class RegisterPage extends StatefulWidget {
   State<RegisterPage> createState() => _RegisterPageState();
 }
 
-// --- Registration Page State and Logic ---
+// State class for registration logic and UI
 class _RegisterPageState extends State<RegisterPage> {
   bool _obscurePassword = true;
-
+  bool _acceptedTerms = false;
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
-  // --- Validation Regex and Common Password List ---
   final RegExp nameRegExp = RegExp(r"^[a-zA-Z][a-zA-Z\s'-]{1,99}$");
   final RegExp emailRegExp = RegExp(
     r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$",
@@ -46,25 +47,23 @@ class _RegisterPageState extends State<RegisterPage> {
     "admin",
   ];
 
-  // --- Registration API Call and Validation ---
+  // Handle registration logic and API call
   Future<void> _register() async {
+    final appLoc = AppLocalizations.of(context);
     String name = _nameController.text.trim();
     String email = _emailController.text.trim();
     String password = _passwordController.text;
 
-    // Name validation
     if (name.isEmpty || !nameRegExp.hasMatch(name)) {
       _showError(
         "Please enter a valid name (letters, spaces, hyphens, apostrophes, 2-100 chars).",
       );
       return;
     }
-    // Email validation
     if (email.isEmpty || !emailRegExp.hasMatch(email)) {
       _showError("Please enter a valid email address.");
       return;
     }
-    // Password validation
     if (password.isEmpty ||
         password.length < 8 ||
         !passwordRegExp.hasMatch(password)) {
@@ -73,13 +72,15 @@ class _RegisterPageState extends State<RegisterPage> {
       );
       return;
     }
-    // Common password check
     if (commonPasswords.contains(password.toLowerCase())) {
       _showError("Password is too common. Please choose a stronger password.");
       return;
     }
+    if (!_acceptedTerms) {
+      _showError("You must accept the Terms and Conditions to register.");
+      return;
+    }
 
-    // Send registration request
     final url = 'http://192.168.1.100/patchup_app/lib/api/register.php';
     final response = await http.post(
       Uri.parse(url),
@@ -93,16 +94,14 @@ class _RegisterPageState extends State<RegisterPage> {
     final result = jsonDecode(response.body);
     if (result["success"]) {
       UserSession.email = email;
-      // Save email to device
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('user_email', UserSession.email);
 
-      // Show success message and navigate to home
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text(
-            "Registration successful! Welcome!",
-            style: TextStyle(
+          content: Text(
+            appLoc.translate("Registration successful! Welcome!"),
+            style: const TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.w600,
               fontSize: 16,
@@ -123,13 +122,13 @@ class _RegisterPageState extends State<RegisterPage> {
         MaterialPageRoute(builder: (context) => const NavigationExample()),
       );
     } else {
-      // Show error dialog on failed registration
       _showError(result["message"] ?? "Unknown error");
     }
   }
 
-  // --- Error Dialog Display ---
+  // Show error dialog for registration errors
   void _showError(String message) {
+    final appLoc = AppLocalizations.of(context);
     showDialog(
       context: context,
       builder:
@@ -138,9 +137,9 @@ class _RegisterPageState extends State<RegisterPage> {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(18),
             ),
-            title: const Text(
-              "Registration Failed",
-              style: TextStyle(
+            title: Text(
+              appLoc.translate("Registration Failed"),
+              style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
                 fontSize: 22,
@@ -160,9 +159,12 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                 ),
                 onPressed: () => Navigator.pop(context),
-                child: const Text(
-                  "OK",
-                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                child: Text(
+                  appLoc.translate("OK"),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                  ),
                 ),
               ),
             ],
@@ -172,12 +174,14 @@ class _RegisterPageState extends State<RegisterPage> {
 
   @override
   Widget build(BuildContext context) {
-    // --- Registration Page UI ---
+    final appLoc = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: const Color(0xFF04274B),
       appBar: AppBar(
         backgroundColor: const Color(0xFF04274B),
         elevation: 0,
+        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.transparent,
         leading: Container(
           margin: const EdgeInsets.only(left: 8, top: 8, bottom: 8),
           decoration: BoxDecoration(
@@ -202,9 +206,9 @@ class _RegisterPageState extends State<RegisterPage> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // --- Logo Section ---
+                // Logo section
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 32.0),
+                  padding: const EdgeInsets.only(bottom: 16.0),
                   child: Center(
                     child: Image.asset(
                       'assets/images/logo/Logo 2.webp',
@@ -214,7 +218,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     ),
                   ),
                 ),
-                // --- Registration Card Section ---
+                // Registration form card
                 Center(
                   child: Card(
                     elevation: 18,
@@ -237,19 +241,19 @@ class _RegisterPageState extends State<RegisterPage> {
                       ),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
-                          vertical: 38,
-                          horizontal: 32,
+                          vertical: 32,
+                          horizontal: 28,
                         ),
                         child: ConstrainedBox(
                           constraints: const BoxConstraints(maxWidth: 400),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              // --- Title ---
-                              const Text(
-                                'Create Account',
+                              // Title and subtitle
+                              Text(
+                                appLoc.translate('Create Account'),
                                 textAlign: TextAlign.center,
-                                style: TextStyle(
+                                style: const TextStyle(
                                   fontSize: 30,
                                   fontWeight: FontWeight.bold,
                                   color: Color(0xFF04274B),
@@ -257,23 +261,22 @@ class _RegisterPageState extends State<RegisterPage> {
                                   height: 1.2,
                                 ),
                               ),
-                              const SizedBox(height: 8),
-                              // --- Subtitle ---
-                              const Text(
-                                'Sign up to get started',
+                              const SizedBox(height: 6),
+                              Text(
+                                appLoc.translate('Sign up to get started'),
                                 textAlign: TextAlign.center,
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Color(0xFFB1B5C3),
                                   fontSize: 15,
                                   fontWeight: FontWeight.w500,
                                   letterSpacing: 0.1,
                                 ),
                               ),
-                              const SizedBox(height: 30),
-                              // --- Name Label ---
-                              const Text(
-                                'Name',
-                                style: TextStyle(
+                              const SizedBox(height: 22),
+                              // Name field
+                              Text(
+                                appLoc.translate('Name'),
+                                style: const TextStyle(
                                   color: Color(0xFF8F9BB3),
                                   fontWeight: FontWeight.w600,
                                   fontSize: 15,
@@ -281,7 +284,6 @@ class _RegisterPageState extends State<RegisterPage> {
                                 ),
                               ),
                               const SizedBox(height: 6),
-                              // --- Name Input Field ---
                               Focus(
                                 child: Builder(
                                   builder: (context) {
@@ -332,10 +334,10 @@ class _RegisterPageState extends State<RegisterPage> {
                                 ),
                               ),
                               const SizedBox(height: 18),
-                              // --- Email Label ---
-                              const Text(
-                                'Email',
-                                style: TextStyle(
+                              // Email field
+                              Text(
+                                appLoc.translate('Email Login'),
+                                style: const TextStyle(
                                   color: Color(0xFF8F9BB3),
                                   fontWeight: FontWeight.w600,
                                   fontSize: 15,
@@ -343,7 +345,6 @@ class _RegisterPageState extends State<RegisterPage> {
                                 ),
                               ),
                               const SizedBox(height: 6),
-                              // --- Email Input Field ---
                               Focus(
                                 child: Builder(
                                   builder: (context) {
@@ -394,10 +395,10 @@ class _RegisterPageState extends State<RegisterPage> {
                                 ),
                               ),
                               const SizedBox(height: 18),
-                              // --- Password Label ---
-                              const Text(
-                                'Password',
-                                style: TextStyle(
+                              // Password field
+                              Text(
+                                appLoc.translate('Password'),
+                                style: const TextStyle(
                                   color: Color(0xFF8F9BB3),
                                   fontWeight: FontWeight.w600,
                                   fontSize: 15,
@@ -405,7 +406,6 @@ class _RegisterPageState extends State<RegisterPage> {
                                 ),
                               ),
                               const SizedBox(height: 6),
-                              // --- Password Input Field ---
                               Focus(
                                 child: Builder(
                                   builder: (context) {
@@ -473,13 +473,73 @@ class _RegisterPageState extends State<RegisterPage> {
                                   },
                                 ),
                               ),
-                              const SizedBox(height: 22),
-                              // --- Sign Up Button ---
+                              const SizedBox(height: 10),
+                              // Terms and conditions checkbox
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Checkbox(
+                                    value: _acceptedTerms,
+                                    onChanged: (value) {
+                                      setState(() {
+                                        _acceptedTerms = value ?? false;
+                                      });
+                                    },
+                                    activeColor: const Color(0xFF04274B),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(5),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder:
+                                                (context) =>
+                                                    const TermsConditionsPage(),
+                                          ),
+                                        );
+                                      },
+                                      child: RichText(
+                                        text: TextSpan(
+                                          text:
+                                              appLoc.translate(
+                                                'I agree to the',
+                                              ) +
+                                              ' ',
+                                          style: const TextStyle(
+                                            color: Color(0xFF04274B),
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                          children: [
+                                            TextSpan(
+                                              text: appLoc.translate(
+                                                'Terms and Conditions',
+                                              ),
+                                              style: const TextStyle(
+                                                color: Color(0xFF04274B),
+                                                decoration:
+                                                    TextDecoration.underline,
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              // Sign up button
                               SizedBox(
                                 width: double.infinity,
                                 height: 50,
                                 child: ElevatedButton(
-                                  onPressed: _register,
+                                  onPressed: _acceptedTerms ? _register : null,
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: const Color(0xFF04274B),
                                     shape: RoundedRectangleBorder(
@@ -488,9 +548,9 @@ class _RegisterPageState extends State<RegisterPage> {
                                     elevation: 0,
                                     shadowColor: Colors.transparent,
                                   ),
-                                  child: const Text(
-                                    'Sign Up',
-                                    style: TextStyle(
+                                  child: Text(
+                                    appLoc.translate('Sign Up'),
+                                    style: const TextStyle(
                                       color: Colors.white,
                                       fontWeight: FontWeight.w700,
                                       fontSize: 18,
@@ -506,15 +566,18 @@ class _RegisterPageState extends State<RegisterPage> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 28),
-                // --- Footer with Login Link ---
+                const SizedBox(height: 24),
+                // Login link
                 Center(
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text(
-                        "Already have an account? ",
-                        style: TextStyle(color: Colors.white, fontSize: 15),
+                      Text(
+                        appLoc.translate('Already have an account?'),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                        ),
                       ),
                       GestureDetector(
                         onTap: () {
@@ -525,9 +588,9 @@ class _RegisterPageState extends State<RegisterPage> {
                             ),
                           );
                         },
-                        child: const Text(
-                          'Log In',
-                          style: TextStyle(
+                        child: Text(
+                          appLoc.translate('Log In'),
+                          style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.w600,
                             fontSize: 15,
@@ -538,7 +601,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 36),
+                const SizedBox(height: 28),
               ],
             ),
           ),

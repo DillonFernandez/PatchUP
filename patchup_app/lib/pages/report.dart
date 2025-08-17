@@ -1,14 +1,19 @@
+import 'dart:convert';
 import 'dart:io';
 
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uuid/uuid.dart';
 
 import '../components/appbar.dart';
+import '../localization/app_localizations.dart';
 
-// --- Report Page Widget ---
+// Report page widget for submitting pothole reports
 class ReportPage extends StatefulWidget {
   const ReportPage({super.key});
 
@@ -16,20 +21,178 @@ class ReportPage extends StatefulWidget {
   State<ReportPage> createState() => _ReportPageState();
 }
 
-// --- Report Page State ---
+// State class for report page logic and UI
 class _ReportPageState extends State<ReportPage> {
   String? selectedDangerLevel;
-
-  // --- Controllers and State Variables ---
   final TextEditingController _zipController = TextEditingController();
   final TextEditingController _longitudeController = TextEditingController();
   final TextEditingController _latitudeController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
-
   File? _selectedImage;
   final ImagePicker _picker = ImagePicker();
+  ConnectivityResult _connectivityStatus = ConnectivityResult.none;
+  late final Connectivity _connectivity;
+  bool _isSyncing = false;
+  final Uuid _uuid = Uuid();
 
-  // --- Dispose Controllers ---
+  @override
+  void initState() {
+    super.initState();
+    _connectivity = Connectivity();
+    _initConnectivity();
+    _connectivity.onConnectivityChanged.listen((
+      List<ConnectivityResult> results,
+    ) {
+      final result =
+          results.isNotEmpty ? results.first : ConnectivityResult.none;
+      setState(() {
+        _connectivityStatus = result;
+      });
+      if (_isOnline(result)) {
+        _syncOfflineReports();
+      }
+    });
+  }
+
+  // Initialize connectivity and sync offline reports if online
+  Future<void> _initConnectivity() async {
+    final statuses = await _connectivity.checkConnectivity();
+    final status =
+        statuses.isNotEmpty ? statuses.first : ConnectivityResult.none;
+    setState(() {
+      _connectivityStatus = status;
+    });
+    if (_isOnline(status)) {
+      _syncOfflineReports();
+    }
+  }
+
+  // Check if device is online
+  bool _isOnline(ConnectivityResult result) {
+    return result == ConnectivityResult.mobile ||
+        result == ConnectivityResult.wifi;
+  }
+
+  // Get list of synced report IDs from preferences
+  Future<Set<String>> _getSyncedReportIds() async {
+    final prefs = await SharedPreferences.getInstance();
+    return (prefs.getStringList('synced_report_ids') ?? []).toSet();
+  }
+
+  // Add a report ID to the synced list
+  Future<void> _addSyncedReportId(String id) async {
+    final prefs = await SharedPreferences.getInstance();
+    final ids = prefs.getStringList('synced_report_ids') ?? [];
+    if (!ids.contains(id)) {
+      ids.add(id);
+      await prefs.setStringList('synced_report_ids', ids);
+    }
+  }
+
+  // Save a report locally for offline sync
+  Future<void> _saveReportOffline(Map<String, dynamic> report) async {
+    final prefs = await SharedPreferences.getInstance();
+    List<String> reports = prefs.getStringList('offline_reports') ?? [];
+    reports.add(jsonEncode(report));
+    await prefs.setStringList('offline_reports', reports);
+  }
+
+  // Get offline reports, optionally excluding synced ones
+  Future<List<Map<String, dynamic>>> _getOfflineReports({
+    bool excludeSynced = true,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    List<String> reports = prefs.getStringList('offline_reports') ?? [];
+    final syncedIds = excludeSynced ? await _getSyncedReportIds() : <String>{};
+    return reports
+        .map((e) => jsonDecode(e) as Map<String, dynamic>)
+        .where((r) => !excludeSynced || !syncedIds.contains(r['id']))
+        .toList();
+  }
+
+  // Remove synced reports from offline storage
+  Future<void> _removeSyncedReportsFromOffline() async {
+    final prefs = await SharedPreferences.getInstance();
+    List<String> reports = prefs.getStringList('offline_reports') ?? [];
+    final syncedIds = await _getSyncedReportIds();
+    final unsyncedReports =
+        reports
+            .map((e) => jsonDecode(e) as Map<String, dynamic>)
+            .where((r) => !syncedIds.contains(r['id']))
+            .map((r) => jsonEncode(r))
+            .toList();
+    await prefs.setStringList('offline_reports', unsyncedReports);
+  }
+
+  // Sync offline reports to backend when online
+  Future<void> _syncOfflineReports() async {
+    if (_isSyncing) return;
+    _isSyncing = true;
+    final reports = await _getOfflineReports();
+    if (reports.isEmpty) {
+      _isSyncing = false;
+      return;
+    }
+    final syncedIds = await _getSyncedReportIds();
+    for (final report in reports) {
+      final reportId = report['id'] as String? ?? '';
+      if (reportId.isEmpty || syncedIds.contains(reportId)) continue;
+      final success = await _uploadLocationToDB(
+        zip: report['ZipCode'],
+        lat: report['Latitude'],
+        lng: report['Longitude'],
+        desc: report['Description'],
+        severity: report['SeverityLevel'],
+        imagePath: report['ImagePath'],
+        userEmail: report['UserEmail'],
+      );
+      if (success) {
+        await _addSyncedReportId(reportId);
+      }
+    }
+    await _removeSyncedReportsFromOffline();
+    _isSyncing = false;
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Offline reports synced successfully!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
+  }
+
+  // Upload a single report to backend API
+  Future<bool> _uploadLocationToDB({
+    required String zip,
+    required String lat,
+    required String lng,
+    required String desc,
+    required String severity,
+    required String imagePath,
+    required String userEmail,
+  }) async {
+    final uri = Uri.parse(
+      'http://192.168.1.100/patchup_app/lib/api/pothole_report.php',
+    );
+    var request = http.MultipartRequest('POST', uri);
+    request.fields['ZipCode'] = zip;
+    request.fields['Latitude'] = lat;
+    request.fields['Longitude'] = lng;
+    request.fields['Description'] = desc;
+    request.fields['SeverityLevel'] = severity;
+    request.fields['UserEmail'] = userEmail;
+    if (imagePath.isNotEmpty) {
+      request.files.add(await http.MultipartFile.fromPath('Image', imagePath));
+    }
+    try {
+      final response = await request.send();
+      return response.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
   @override
   void dispose() {
     _zipController.dispose();
@@ -39,67 +202,22 @@ class _ReportPageState extends State<ReportPage> {
     super.dispose();
   }
 
-  // --- Upload Location Data and Image to Backend ---
-  Future<void> _uploadLocationToDB() async {
-    final zip = _zipController.text.trim();
-    final lat = _latitudeController.text.trim();
-    final lng = _longitudeController.text.trim();
-    final desc = _descriptionController.text.trim();
-    final severity = selectedDangerLevel ?? '';
-
-    if (zip.isEmpty || lat.isEmpty || lng.isEmpty) return;
-
-    final uri = Uri.parse(
-      'http://192.168.1.100/patchup_app/lib/api/pothole_report.php',
-    );
-    var request = http.MultipartRequest('POST', uri);
-
-    request.fields['ZipCode'] = zip;
-    request.fields['Latitude'] = lat;
-    request.fields['Longitude'] = lng;
-    request.fields['Description'] = desc;
-    request.fields['SeverityLevel'] = severity;
-    request.fields['UserEmail'] = UserSession.email; // <-- Pass user email
-
-    if (_selectedImage != null) {
-      request.files.add(
-        await http.MultipartFile.fromPath('Image', _selectedImage!.path),
-      );
-    }
-
-    await request.send();
-  }
-
-  // --- Refresh Location and Auto-fill Fields ---
+  // Refresh location using geolocator and update fields
   Future<void> _refreshLocation() async {
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        // Location services are not enabled
-        return;
-      }
-
+      if (!serviceEnabled) return;
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          // Permissions are denied
-          return;
-        }
+        if (permission == LocationPermission.denied) return;
       }
-      if (permission == LocationPermission.deniedForever) {
-        // Permissions are denied forever
-        return;
-      }
-
+      if (permission == LocationPermission.deniedForever) return;
       Position position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
-
       _longitudeController.text = position.longitude.toString();
       _latitudeController.text = position.latitude.toString();
-
-      // Improved zip code retrieval
       List<Placemark> placemarks = await placemarkFromCoordinates(
         position.latitude,
         position.longitude,
@@ -114,12 +232,11 @@ class _ReportPageState extends State<ReportPage> {
       _zipController.text = zip;
       setState(() {});
     } catch (e) {
-      // Handle error (optional)
       _zipController.text = '';
     }
   }
 
-  // --- Pick Image from Camera ---
+  // Pick image from camera
   Future<void> _pickImageFromCamera() async {
     final pickedFile = await _picker.pickImage(source: ImageSource.camera);
     if (pickedFile != null) {
@@ -129,7 +246,7 @@ class _ReportPageState extends State<ReportPage> {
     }
   }
 
-  // --- Pick Image from Gallery ---
+  // Pick image from gallery
   Future<void> _pickImageFromGallery() async {
     final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
@@ -139,8 +256,9 @@ class _ReportPageState extends State<ReportPage> {
     }
   }
 
-  // --- Show Thank You Dialog and Clear Form ---
+  // Show thank you dialog after successful submission
   Future<void> _showThankYouDialog(BuildContext context) async {
+    final appLoc = AppLocalizations.of(context);
     await showDialog(
       context: context,
       builder:
@@ -149,17 +267,17 @@ class _ReportPageState extends State<ReportPage> {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(18),
             ),
-            title: const Text(
-              "Thank You!",
-              style: TextStyle(
+            title: Text(
+              appLoc.translate("Thank You!"),
+              style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
                 fontSize: 22,
               ),
             ),
-            content: const Text(
-              "Thank you for caring for our roads and community. Your report helps make a difference!",
-              style: TextStyle(color: Colors.white, fontSize: 16),
+            content: Text(
+              appLoc.translate("Thank You Message"),
+              style: const TextStyle(color: Colors.white, fontSize: 16),
             ),
             actions: [
               TextButton(
@@ -172,20 +290,21 @@ class _ReportPageState extends State<ReportPage> {
                 ),
                 onPressed: () {
                   Navigator.pop(context);
-                  // Clear all fields after dialog is closed
                   _zipController.clear();
                   _longitudeController.clear();
                   _latitudeController.clear();
                   _descriptionController.clear();
                   setState(() {
                     _selectedImage = null;
-                    selectedDangerLevel = null; // Clear severity
-                    // Add more fields to clear if needed
+                    selectedDangerLevel = null;
                   });
                 },
-                child: const Text(
-                  "Close",
-                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                child: Text(
+                  appLoc.translate("Close"),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                  ),
                 ),
               ),
             ],
@@ -193,8 +312,9 @@ class _ReportPageState extends State<ReportPage> {
     );
   }
 
-  // --- Show Error Dialog ---
+  // Show error dialog for incomplete fields or errors
   Future<void> _showErrorDialog(BuildContext context, String message) async {
+    final appLoc = AppLocalizations.of(context);
     await showDialog(
       context: context,
       builder:
@@ -203,9 +323,9 @@ class _ReportPageState extends State<ReportPage> {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(18),
             ),
-            title: const Text(
-              "Incomplete Fields",
-              style: TextStyle(
+            title: Text(
+              appLoc.translate("Incomplete Fields"),
+              style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
                 fontSize: 22,
@@ -227,9 +347,68 @@ class _ReportPageState extends State<ReportPage> {
                 onPressed: () {
                   Navigator.pop(context);
                 },
-                child: const Text(
-                  "Close",
-                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                child: Text(
+                  appLoc.translate("Close"),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+            ],
+          ),
+    );
+  }
+
+  // Show offline dialog when report is saved locally
+  Future<void> _showOfflineDialog(BuildContext context) async {
+    final appLoc = AppLocalizations.of(context);
+    await showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            backgroundColor: const Color(0xFF04274B),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18),
+            ),
+            title: Text(
+              appLoc.translate("Report Saved Offline"),
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 22,
+              ),
+            ),
+            content: Text(
+              appLoc.translate("Report Saved Offline Message"),
+              style: const TextStyle(color: Colors.white, fontSize: 16),
+            ),
+            actions: [
+              TextButton(
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  backgroundColor: const Color(0xFF0A4173),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                onPressed: () {
+                  Navigator.pop(context);
+                  _zipController.clear();
+                  _longitudeController.clear();
+                  _latitudeController.clear();
+                  _descriptionController.clear();
+                  setState(() {
+                    _selectedImage = null;
+                    selectedDangerLevel = null;
+                  });
+                },
+                child: Text(
+                  appLoc.translate("Close"),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                  ),
                 ),
               ),
             ],
@@ -239,12 +418,34 @@ class _ReportPageState extends State<ReportPage> {
 
   @override
   Widget build(BuildContext context) {
+    final appLoc = AppLocalizations.of(context);
     return Scaffold(
-      // --- AppBar Section ---
       appBar: AppBar(
-        title: const Text('Report a Pothole'),
+        title: Text(
+          appLoc.translate('Report a Pothole'),
+          style: const TextStyle(
+            fontFamily: 'Montserrat',
+            fontWeight: FontWeight.bold,
+            letterSpacing: 0.5,
+          ),
+        ),
         backgroundColor: const Color(0xFF04274B),
         foregroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: true,
+        actions: [
+          // Show offline icon if not online
+          if (!_isOnline(_connectivityStatus))
+            Padding(
+              padding: const EdgeInsets.only(right: 16.0),
+              child: Icon(
+                Icons.cloud_off,
+                color: Colors.redAccent,
+                size: 28,
+                semanticLabel: 'Offline',
+              ),
+            ),
+        ],
       ),
       backgroundColor: Colors.white,
       body: SingleChildScrollView(
@@ -253,7 +454,7 @@ class _ReportPageState extends State<ReportPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // --- Header Section ---
+              // Header section
               Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.center,
@@ -272,7 +473,7 @@ class _ReportPageState extends State<ReportPage> {
                   ),
                   SizedBox(height: 14),
                   Text(
-                    "Report a Pothole",
+                    appLoc.translate("Report a Pothole"),
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 26,
@@ -281,13 +482,13 @@ class _ReportPageState extends State<ReportPage> {
                   ),
                   SizedBox(height: 4),
                   Text(
-                    "Help us keep roads safe & smooth",
+                    appLoc.translate("Help us keep roads safe & smooth"),
                     style: TextStyle(fontSize: 15, color: Colors.black54),
                   ),
                 ],
               ),
               const SizedBox(height: 20),
-              // --- Photo Picker Card Section ---
+              // Image picker section
               Container(
                 width: double.infinity,
                 decoration: BoxDecoration(
@@ -315,7 +516,6 @@ class _ReportPageState extends State<ReportPage> {
                     ),
                     child: Column(
                       children: [
-                        // --- Image Preview and Picker Buttons ---
                         Stack(
                           alignment: Alignment.center,
                           children: [
@@ -362,7 +562,7 @@ class _ReportPageState extends State<ReportPage> {
                                   color: Colors.white,
                                 ),
                                 label: Text(
-                                  'Take Photo',
+                                  appLoc.translate('Take Photo'),
                                   style: TextStyle(color: Colors.white),
                                 ),
                                 style: TextButton.styleFrom(
@@ -386,7 +586,7 @@ class _ReportPageState extends State<ReportPage> {
                                   color: Colors.black87,
                                 ),
                                 label: Text(
-                                  'Upload',
+                                  appLoc.translate('Upload'),
                                   style: TextStyle(color: Colors.black87),
                                 ),
                                 style: TextButton.styleFrom(
@@ -409,7 +609,7 @@ class _ReportPageState extends State<ReportPage> {
                 ),
               ),
               const SizedBox(height: 20),
-              // --- Location Card Section ---
+              // Location input section
               Container(
                 width: double.infinity,
                 decoration: BoxDecoration(
@@ -443,7 +643,7 @@ class _ReportPageState extends State<ReportPage> {
                             Icon(Icons.location_on, color: Color(0xFF04274B)),
                             const SizedBox(width: 8),
                             Text(
-                              'Location',
+                              appLoc.translate('Location'),
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 17,
@@ -458,7 +658,7 @@ class _ReportPageState extends State<ReportPage> {
                                   vertical: 6,
                                 ),
                                 child: Text(
-                                  'Get Location',
+                                  appLoc.translate('Get Location'),
                                   style: TextStyle(
                                     color: Color(0xFF04274B),
                                     fontWeight: FontWeight.w500,
@@ -475,7 +675,7 @@ class _ReportPageState extends State<ReportPage> {
                           height: 1,
                         ),
                         const SizedBox(height: 18),
-                        // --- Zip Code Field ---
+                        // Zip code input
                         Focus(
                           child: Builder(
                             builder: (context) {
@@ -483,7 +683,7 @@ class _ReportPageState extends State<ReportPage> {
                               return TextFormField(
                                 controller: _zipController,
                                 decoration: InputDecoration(
-                                  hintText: 'Zip Code',
+                                  hintText: appLoc.translate('Zip Code'),
                                   contentPadding: const EdgeInsets.symmetric(
                                     vertical: 10,
                                     horizontal: 16,
@@ -521,7 +721,7 @@ class _ReportPageState extends State<ReportPage> {
                           ),
                         ),
                         const SizedBox(height: 14),
-                        // --- Longitude Field ---
+                        // Longitude input
                         Focus(
                           child: Builder(
                             builder: (context) {
@@ -529,7 +729,7 @@ class _ReportPageState extends State<ReportPage> {
                               return TextFormField(
                                 controller: _longitudeController,
                                 decoration: InputDecoration(
-                                  hintText: 'Longitude',
+                                  hintText: appLoc.translate('Longitude'),
                                   contentPadding: const EdgeInsets.symmetric(
                                     vertical: 10,
                                     horizontal: 16,
@@ -569,7 +769,7 @@ class _ReportPageState extends State<ReportPage> {
                           ),
                         ),
                         const SizedBox(height: 14),
-                        // --- Latitude Field ---
+                        // Latitude input
                         Focus(
                           child: Builder(
                             builder: (context) {
@@ -577,7 +777,7 @@ class _ReportPageState extends State<ReportPage> {
                               return TextFormField(
                                 controller: _latitudeController,
                                 decoration: InputDecoration(
-                                  hintText: 'Latitude',
+                                  hintText: appLoc.translate('Latitude'),
                                   contentPadding: const EdgeInsets.symmetric(
                                     vertical: 10,
                                     horizontal: 16,
@@ -623,7 +823,7 @@ class _ReportPageState extends State<ReportPage> {
                 ),
               ),
               const SizedBox(height: 20),
-              // --- Description Card Section ---
+              // Description input section
               Container(
                 width: double.infinity,
                 decoration: BoxDecoration(
@@ -653,7 +853,7 @@ class _ReportPageState extends State<ReportPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Description',
+                          appLoc.translate('Description'),
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 17,
@@ -666,7 +866,6 @@ class _ReportPageState extends State<ReportPage> {
                           height: 1,
                         ),
                         const SizedBox(height: 18),
-                        // --- Description Field ---
                         Focus(
                           child: Builder(
                             builder: (context) {
@@ -675,8 +874,9 @@ class _ReportPageState extends State<ReportPage> {
                                 controller: _descriptionController,
                                 maxLines: 3,
                                 decoration: InputDecoration(
-                                  hintText:
-                                      'E.g., Large pothole, risk to vehicles, near crosswalk...',
+                                  hintText: appLoc.translate(
+                                    'Description Hint',
+                                  ),
                                   contentPadding: const EdgeInsets.symmetric(
                                     vertical: 10,
                                     horizontal: 16,
@@ -718,7 +918,7 @@ class _ReportPageState extends State<ReportPage> {
                 ),
               ),
               const SizedBox(height: 20),
-              // --- Severity Level Card Section ---
+              // Severity level selection section
               Container(
                 width: double.infinity,
                 decoration: BoxDecoration(
@@ -748,7 +948,7 @@ class _ReportPageState extends State<ReportPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Severity Level',
+                          appLoc.translate('Severity Level'),
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 17,
@@ -809,12 +1009,11 @@ class _ReportPageState extends State<ReportPage> {
                 ),
               ),
               const SizedBox(height: 20),
-              // --- Submit Button Section ---
+              // Submit report button
               SizedBox(
                 height: 56,
                 child: ElevatedButton.icon(
                   onPressed: () async {
-                    // --- Validation: Check All Fields ---
                     final zip = _zipController.text.trim();
                     final lat = _latitudeController.text.trim();
                     final lng = _longitudeController.text.trim();
@@ -828,16 +1027,60 @@ class _ReportPageState extends State<ReportPage> {
                         _selectedImage == null) {
                       await _showErrorDialog(
                         context,
-                        "Please fill in all fields and attach a photo before submitting your report.",
+                        appLoc.translate("Incomplete Fields Message"),
                       );
                       return;
                     }
-                    await _uploadLocationToDB();
-                    await _showThankYouDialog(context);
+                    final userEmail = UserSession.email;
+                    final imagePath = _selectedImage!.path;
+                    final reportId = _uuid.v4();
+                    final report = {
+                      'id': reportId,
+                      'ZipCode': zip,
+                      'Latitude': lat,
+                      'Longitude': lng,
+                      'Description': desc,
+                      'SeverityLevel': severity,
+                      'ImagePath': imagePath,
+                      'UserEmail': userEmail,
+                    };
+                    final syncedIds = await _getSyncedReportIds();
+                    if (syncedIds.contains(reportId)) {
+                      await _showErrorDialog(
+                        context,
+                        appLoc.translate(
+                          "This report has already been submitted.",
+                        ),
+                      );
+                      return;
+                    }
+                    if (_isOnline(_connectivityStatus)) {
+                      final success = await _uploadLocationToDB(
+                        zip: zip,
+                        lat: lat,
+                        lng: lng,
+                        desc: desc,
+                        severity: severity,
+                        imagePath: imagePath,
+                        userEmail: userEmail,
+                      );
+                      if (success) {
+                        await _addSyncedReportId(reportId);
+                        await _showThankYouDialog(context);
+                      } else {
+                        // Save offline if failed
+                        await _saveReportOffline(report);
+                        await _showOfflineDialog(context);
+                      }
+                    } else {
+                      // Save report locally for later sync
+                      await _saveReportOffline(report);
+                      await _showOfflineDialog(context);
+                    }
                   },
                   icon: Icon(Icons.send, color: Colors.white),
                   label: Text(
-                    'Submit Report',
+                    appLoc.translate('Submit Report'),
                     style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
                   ),
                   style: ElevatedButton.styleFrom(
@@ -859,7 +1102,7 @@ class _ReportPageState extends State<ReportPage> {
   }
 }
 
-// --- Danger Level Button Widget ---
+// Widget for selecting severity/danger level
 class _DangerLevelButton extends StatelessWidget {
   final String label;
   final Color color;
@@ -875,6 +1118,7 @@ class _DangerLevelButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final appLoc = AppLocalizations.of(context);
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
@@ -892,7 +1136,7 @@ class _DangerLevelButton extends StatelessWidget {
         ),
         alignment: Alignment.center,
         child: Text(
-          label,
+          appLoc.translate(label),
           style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w400,

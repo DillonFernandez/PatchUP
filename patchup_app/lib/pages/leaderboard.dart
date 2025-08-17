@@ -2,18 +2,15 @@ import 'package:flutter/material.dart';
 
 import '../components/appbar.dart';
 
-/// --- Leaderboard Page Widget ---
+// Leaderboard page widget (currently in development)
 class LeaderBoardPage extends StatelessWidget {
   const LeaderBoardPage({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // --- Custom AppBar Section ---
       appBar: const UserAppBar(),
-      // --- Page Background Color ---
       backgroundColor: Colors.white,
-      // --- Main Body Section ---
       body: Center(
         child: Card(
           elevation: 4,
@@ -26,7 +23,6 @@ class LeaderBoardPage extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // --- Placeholder Text for Development ---
                 Text(
                   'In Development',
                   style: TextStyle(

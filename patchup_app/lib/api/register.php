@@ -1,31 +1,31 @@
 <?php
-// --- Set JSON Response Header ---
+// Set response type to JSON
 header("Content-Type: application/json");
 
-// --- Include Database Connection ---
+// Include database connection
 include_once("../database/db_connection.php");
 
-// --- Parse Incoming JSON Request Data ---
+// Parse incoming JSON request data
 $data = json_decode(file_get_contents("php://input"), true);
 
-// --- Extract and Sanitize User Input ---
+// Extract and sanitize user input
 $name = trim($data["Name"] ?? '');
 $email = trim($data["Email"] ?? '');
 $password = $data["PasswordHash"] ?? '';
 
-// --- Validate Name Format ---
+// Validate name format
 if (!$name || !preg_match("/^[a-zA-Z][a-zA-Z\s'-]{1,99}$/", $name)) {
     echo json_encode(["success" => false, "message" => "Invalid name format"]);
     exit;
 }
 
-// --- Validate Email Format ---
+// Validate email format
 if (!$email || !preg_match("/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/", $email)) {
     echo json_encode(["success" => false, "message" => "Invalid email format"]);
     exit;
 }
 
-// --- Check if Email is Already Registered (Case-Insensitive) ---
+// Check if email is already registered (case-insensitive)
 $stmt = $conn->prepare("SELECT 1 FROM user WHERE LOWER(Email) = LOWER(?)");
 $stmt->bind_param("s", $email);
 $stmt->execute();
@@ -38,7 +38,7 @@ if ($stmt->num_rows > 0) {
 }
 $stmt->close();
 
-// --- Validate Password Strength and Format ---
+// Validate password strength and format
 if (
     !$password ||
     strlen($password) < 8 ||
@@ -48,7 +48,7 @@ if (
     exit;
 }
 
-// --- Check Password Against Denylist of Common Passwords ---
+// Check password against denylist of common passwords
 $common_passwords = [
     "password",
     "123456",
@@ -66,20 +66,20 @@ if (in_array(strtolower($password), $common_passwords)) {
     exit;
 }
 
-// --- Hash the Password for Secure Storage ---
+// Hash the password for secure storage
 $passwordHash = password_hash($password, PASSWORD_DEFAULT);
 
-// --- Insert New User into Database ---
+// Insert new user into database
 $stmt = $conn->prepare("INSERT INTO user (Name, Email, PasswordHash) VALUES (?, ?, ?)");
 $stmt->bind_param("sss", $name, $email, $passwordHash);
 
-// --- Respond with Success or Error Message ---
+// Respond with success or error message
 if ($stmt->execute()) {
     echo json_encode(["success" => true]);
 } else {
     echo json_encode(["success" => false, "message" => $conn->error]);
 }
 
-// --- Close Statement and Database Connection ---
+// Close statement and database connection
 $stmt->close();
 $conn->close();

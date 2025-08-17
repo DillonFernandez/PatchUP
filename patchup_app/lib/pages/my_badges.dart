@@ -1,19 +1,27 @@
 import 'package:flutter/material.dart';
 
-// --- My Badges Page Widget ---
+import '../localization/app_localizations.dart';
+
+// My Badges page widget (currently in development)
 class MyBadgesPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // --- AppBar Section ---
       appBar: AppBar(
-        title: const Text('My Badges'),
+        title: Text(
+          AppLocalizations.of(context).translate('My Badges AppBar Title'),
+          style: const TextStyle(
+            fontFamily: 'Montserrat',
+            fontWeight: FontWeight.bold,
+            letterSpacing: 0.5,
+          ),
+        ),
         backgroundColor: const Color(0xFF04274B),
         foregroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: true,
       ),
-      // --- Page Background Color ---
       backgroundColor: Colors.white,
-      // --- Main Body Section ---
       body: Center(
         child: Card(
           elevation: 4,
@@ -26,7 +34,6 @@ class MyBadgesPage extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // --- Placeholder Text for Development ---
                 Text(
                   'In Development',
                   style: TextStyle(

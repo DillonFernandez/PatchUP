@@ -1,21 +1,47 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'components/appbar.dart';
 import 'components/bottonnav.dart';
+import 'localization/app_localizations.dart';
 import 'pages/login.dart';
 import 'pages/register.dart';
 
-// --- Application Entry Point ---
+// App entry point
 void main() {
   runApp(const MyApp());
 }
 
-// --- Main Application Widget ---
-class MyApp extends StatelessWidget {
+// Main app widget with locale and navigation logic
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
-  // --- Determine Initial Page Based on Login State ---
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  Locale? _locale;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLocale();
+  }
+
+  // Load saved locale from shared preferences
+  Future<void> _loadLocale() async {
+    final prefs = await SharedPreferences.getInstance();
+    final langCode = prefs.getString('selected_language');
+    if (langCode != null && langCode.isNotEmpty) {
+      setState(() {
+        _locale = Locale(langCode);
+      });
+    }
+  }
+
+  // Determine initial page based on user session
   Future<Widget> _getInitialPage() async {
     final prefs = await SharedPreferences.getInstance();
     final email = prefs.getString('user_email') ?? '';
@@ -26,15 +52,43 @@ class MyApp extends StatelessWidget {
     return const SplashScreen();
   }
 
+  // Set and persist locale
+  void setLocale(Locale locale) async {
+    setState(() {
+      _locale = locale;
+    });
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('selected_language', locale.languageCode);
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'PatchUp',
+      locale: _locale,
+      supportedLocales: const [Locale('en'), Locale('si'), Locale('ta')],
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      localeResolutionCallback: (locale, supportedLocales) {
+        if (locale != null) {
+          for (var supportedLocale in supportedLocales) {
+            if (supportedLocale.languageCode == locale.languageCode) {
+              return supportedLocale;
+            }
+          }
+        }
+        return const Locale('en');
+      },
       home: FutureBuilder<Widget>(
         future: _getInitialPage(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.done) {
-            return snapshot.data!;
+            // Pass setLocale to children for language change
+            return InheritedLocale(setLocale: setLocale, child: snapshot.data!);
           }
           return const Scaffold(
             backgroundColor: Color(0xFF04274B),
@@ -47,7 +101,21 @@ class MyApp extends StatelessWidget {
   }
 }
 
-// --- Splash Screen Widget ---
+// Inherited widget to pass setLocale down the widget tree
+class InheritedLocale extends InheritedWidget {
+  final void Function(Locale) setLocale;
+
+  const InheritedLocale({required this.setLocale, required Widget child})
+    : super(child: child);
+
+  static InheritedLocale? of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<InheritedLocale>();
+
+  @override
+  bool updateShouldNotify(InheritedLocale oldWidget) => false;
+}
+
+// Splash screen for unauthenticated users
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -55,15 +123,14 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-// --- Splash Screen State and UI ---
 class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
+    final appLoc = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: const Color(0xFF04274B),
       body: Column(
         children: [
-          // --- Logo Header Section ---
           Container(
             decoration: const BoxDecoration(
               color: Color(0xFF04274B),
@@ -78,7 +145,6 @@ class _SplashScreenState extends State<SplashScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // --- App Logo ---
                   Padding(
                     padding: const EdgeInsets.only(top: 60.0),
                     child: Container(
@@ -104,7 +170,6 @@ class _SplashScreenState extends State<SplashScreen> {
               ),
             ),
           ),
-          // --- Main Content Section (Slogan, Description, Buttons) ---
           Expanded(
             child: Container(
               width: double.infinity,
@@ -144,11 +209,11 @@ class _SplashScreenState extends State<SplashScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         const SizedBox(height: 10),
-                        // --- Slogan Title ---
-                        const Text(
-                          'Fixing Roads Together',
+                        Text(
+                          // Localized app slogan
+                          appLoc.translate('Fixing Roads Together'),
                           textAlign: TextAlign.center,
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 32,
                             fontWeight: FontWeight.bold,
                             color: Color(0xFF03264c),
@@ -157,11 +222,11 @@ class _SplashScreenState extends State<SplashScreen> {
                           ),
                         ),
                         const SizedBox(height: 18),
-                        // --- Slogan Description ---
-                        const Text(
-                          'Every bump has a story. Together, let’s pave the way to safer journeys.',
+                        Text(
+                          // Localized splash subtitle
+                          appLoc.translate('Splash Subtitle'),
                           textAlign: TextAlign.center,
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 18,
                             color: Color(0xFFB1B5C3),
                             fontWeight: FontWeight.w500,
@@ -169,7 +234,6 @@ class _SplashScreenState extends State<SplashScreen> {
                           ),
                         ),
                         const SizedBox(height: 28),
-                        // --- Decorative Divider ---
                         Container(
                           width: 48,
                           height: 4,
@@ -179,7 +243,6 @@ class _SplashScreenState extends State<SplashScreen> {
                           ),
                         ),
                         const SizedBox(height: 28),
-                        // --- Login Button ---
                         SizedBox(
                           width: double.infinity,
                           height: 56,
@@ -199,9 +262,9 @@ class _SplashScreenState extends State<SplashScreen> {
                               ),
                               elevation: 0,
                             ),
-                            child: const Text(
-                              'Login',
-                              style: TextStyle(
+                            child: Text(
+                              appLoc.translate('Login'),
+                              style: const TextStyle(
                                 fontSize: 22,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.white,
@@ -210,7 +273,6 @@ class _SplashScreenState extends State<SplashScreen> {
                           ),
                         ),
                         const SizedBox(height: 16),
-                        // --- Register Button ---
                         SizedBox(
                           width: double.infinity,
                           height: 56,
@@ -233,9 +295,9 @@ class _SplashScreenState extends State<SplashScreen> {
                                 borderRadius: BorderRadius.circular(15),
                               ),
                             ),
-                            child: const Text(
-                              'Register',
-                              style: TextStyle(
+                            child: Text(
+                              appLoc.translate('Register'),
+                              style: const TextStyle(
                                 fontSize: 22,
                                 fontWeight: FontWeight.bold,
                               ),

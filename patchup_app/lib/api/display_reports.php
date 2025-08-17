@@ -1,15 +1,15 @@
 <?php
-// --- Include Database Connection ---
+// Database connection
 require_once("../database/db_connection.php");
 
-// --- Set JSON Response Header ---
+// Set response type to JSON
 header('Content-Type: application/json');
 
-// --- Decode Input JSON and Extract User Email if Provided ---
+// Parse input and extract user email if present
 $input = json_decode(file_get_contents('php://input'), true);
 $userEmail = isset($input['UserEmail']) ? $input['UserEmail'] : null;
 
-// --- Prepare and Execute SQL Query Based on Presence of User Email ---
+// Build and execute SQL query based on user email presence
 if ($userEmail) {
     $stmt = $conn->prepare(
         "SELECT p.*, u.Name AS UserName
@@ -29,7 +29,7 @@ if ($userEmail) {
     $result = $conn->query($sql);
 }
 
-// --- Collect Query Results into an Array ---
+// Collect query results into array
 $reports = [];
 if ($result) {
     while ($row = $result->fetch_assoc()) {
@@ -37,8 +37,8 @@ if ($result) {
     }
 }
 
-// --- Output Reports as JSON ---
+// Output reports as JSON
 echo json_encode($reports);
 
-// --- Close Database Connection ---
+// Close database connection
 $conn->close();

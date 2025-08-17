@@ -1,30 +1,30 @@
 <?php
-// --- Set JSON Response Header ---
+// Set response type to JSON
 header("Content-Type: application/json");
 
-// --- Include Database Connection ---
+// Include database connection
 include_once("../database/db_connection.php");
 
-// --- Parse Incoming JSON Request Data ---
+// Parse incoming JSON request data
 $data = json_decode(file_get_contents("php://input"), true);
 
-// --- Extract Email and Password from Request ---
+// Extract email and password from request
 $email = $data["Email"] ?? '';
 $password = $data["PasswordHash"] ?? '';
 
-// --- Validate Required Fields ---
+// Validate required fields
 if (!$email || !$password) {
     echo json_encode(["success" => false, "message" => "Missing fields"]);
     exit;
 }
 
-// --- Prepare SQL Statement to Fetch Password Hash for Given Email ---
+// Prepare SQL statement to fetch password hash for given email
 $stmt = $conn->prepare("SELECT PasswordHash FROM user WHERE Email = ?");
 $stmt->bind_param("s", $email);
 $stmt->execute();
 $stmt->store_result();
 
-// --- Check if User Exists ---
+// Check if user exists
 if ($stmt->num_rows === 0) {
     echo json_encode(["success" => false, "message" => "Invalid email or password"]);
     $stmt->close();
@@ -32,17 +32,17 @@ if ($stmt->num_rows === 0) {
     exit;
 }
 
-// --- Retrieve Password Hash from Database ---
+// Retrieve password hash from database
 $stmt->bind_result($hash);
 $stmt->fetch();
 
-// --- Verify Password and Respond Accordingly ---
+// Verify password and respond accordingly
 if (password_verify($password, $hash)) {
     echo json_encode(["success" => true]);
 } else {
     echo json_encode(["success" => false, "message" => "Invalid email or password"]);
 }
 
-// --- Close Statement and Database Connection ---
+// Close statement and database connection
 $stmt->close();
 $conn->close();

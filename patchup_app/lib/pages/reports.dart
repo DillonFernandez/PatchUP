@@ -7,8 +7,9 @@ import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 
 import '../components/appbar.dart';
+import '../localization/app_localizations.dart';
 
-// --- Fetch Heatmap Points from Backend API ---
+// Fetch heatmap points for all reports
 Future<List<WeightedLatLng>> fetchHeatmapPoints() async {
   final response = await http.get(
     Uri.parse('http://192.168.1.100/patchup_app/lib/api/heatmap_points.php'),
@@ -39,7 +40,7 @@ Future<List<WeightedLatLng>> fetchHeatmapPoints() async {
   return [];
 }
 
-// --- Fetch All Reports from Backend API ---
+// Fetch all reports for display
 Future<List<Map<String, dynamic>>> fetchReports() async {
   final response = await http.get(
     Uri.parse('http://192.168.1.100/patchup_app/lib/api/display_reports.php'),
@@ -51,7 +52,7 @@ Future<List<Map<String, dynamic>>> fetchReports() async {
   return [];
 }
 
-// --- Main Reports Page Widget ---
+// Reports page widget with heatmap, filters, and reports list
 class ReportsPage extends StatefulWidget {
   const ReportsPage({super.key});
 
@@ -59,7 +60,7 @@ class ReportsPage extends StatefulWidget {
   State<ReportsPage> createState() => _ReportsPageState();
 }
 
-// --- State Class for ReportsPage ---
+// State class for reports page logic and UI
 class _ReportsPageState extends State<ReportsPage> {
   String? selectedStatus;
   String? selectedSeverity;
@@ -75,9 +76,9 @@ class _ReportsPageState extends State<ReportsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final appLoc = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: Colors.white,
-      // --- Custom AppBar Section ---
       appBar: const UserAppBar(),
       body: SingleChildScrollView(
         child: Padding(
@@ -85,7 +86,7 @@ class _ReportsPageState extends State<ReportsPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // --- Heatmap Section ---
+              // Heatmap section
               Container(
                 margin: const EdgeInsets.only(bottom: 35),
                 decoration: BoxDecoration(
@@ -114,19 +115,25 @@ class _ReportsPageState extends State<ReportsPage> {
                             if (snapshot.connectionState ==
                                 ConnectionState.waiting) {
                               return const Center(
-                                child: CircularProgressIndicator(),
+                                child: CircularProgressIndicator(
+                                  color: Color(0xFF04274B),
+                                ),
                               );
                             }
                             final points = snapshot.data ?? [];
                             if (points.isEmpty) {
                               return Center(
                                 child: Text(
-                                  'No Reports Found.',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    color: Colors.blueGrey,
-                                    fontWeight: FontWeight.w600,
+                                  appLoc.translate(
+                                    // Show offline message if no points
+                                    'Currently offline. Will sync when back online.',
                                   ),
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.blueGrey[400],
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  textAlign: TextAlign.center,
                                 ),
                               );
                             }
@@ -169,7 +176,7 @@ class _ReportsPageState extends State<ReportsPage> {
                           },
                         ),
                       ),
-                      // --- Overlay Title for Heatmap ---
+                      // Overlay title for heatmap
                       Positioned(
                         left: 18,
                         top: 18,
@@ -198,7 +205,7 @@ class _ReportsPageState extends State<ReportsPage> {
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                'Heatmap Overview',
+                                appLoc.translate('Heatmap Overview'),
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 16,
@@ -214,7 +221,7 @@ class _ReportsPageState extends State<ReportsPage> {
                   ),
                 ),
               ),
-              // --- Divider and Section Label for Reports List ---
+              // Divider and section label for reports list
               Row(
                 children: [
                   Expanded(
@@ -239,7 +246,7 @@ class _ReportsPageState extends State<ReportsPage> {
                         ),
                         const SizedBox(width: 7),
                         Text(
-                          'Reports',
+                          appLoc.translate('Reports'),
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w800,
@@ -260,7 +267,7 @@ class _ReportsPageState extends State<ReportsPage> {
                 ],
               ),
               const SizedBox(height: 20),
-              // --- Filter Controls Section ---
+              // Filter controls section
               Container(
                 width: double.infinity,
                 decoration: BoxDecoration(
@@ -295,7 +302,7 @@ class _ReportsPageState extends State<ReportsPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          "Filter Reports",
+                          appLoc.translate("Filter Reports"),
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w800,
@@ -306,32 +313,45 @@ class _ReportsPageState extends State<ReportsPage> {
                         const SizedBox(height: 12),
                         Row(
                           children: [
-                            // --- Status Dropdown Filter ---
+                            // Status dropdown filter
                             Expanded(
                               child: _ModernDropdown(
-                                label: "Status",
-                                value: selectedStatus ?? 'All',
-                                items: statusOptions,
+                                label: appLoc.translate("Status"),
+                                value:
+                                    selectedStatus ?? appLoc.translate('All'),
+                                items:
+                                    statusOptions
+                                        .map(appLoc.translate)
+                                        .toList(),
                                 icon: Icons.flag_rounded,
                                 onChanged: (val) {
                                   setState(() {
-                                    selectedStatus = val == 'All' ? null : val;
+                                    selectedStatus =
+                                        val == appLoc.translate('All')
+                                            ? null
+                                            : val;
                                   });
                                 },
                               ),
                             ),
                             const SizedBox(width: 12),
-                            // --- Severity Dropdown Filter ---
+                            // Severity dropdown filter
                             Expanded(
                               child: _ModernDropdown(
-                                label: "Severity",
-                                value: selectedSeverity ?? 'All',
-                                items: severityOptions,
+                                label: appLoc.translate("Severity"),
+                                value:
+                                    selectedSeverity ?? appLoc.translate('All'),
+                                items:
+                                    severityOptions
+                                        .map(appLoc.translate)
+                                        .toList(),
                                 icon: Icons.warning_amber_rounded,
                                 onChanged: (val) {
                                   setState(() {
                                     selectedSeverity =
-                                        val == 'All' ? null : val;
+                                        val == appLoc.translate('All')
+                                            ? null
+                                            : val;
                                   });
                                 },
                               ),
@@ -339,7 +359,7 @@ class _ReportsPageState extends State<ReportsPage> {
                           ],
                         ),
                         const SizedBox(height: 12),
-                        // --- Date Range Filter and Clear Button ---
+                        // Date range filter and clear button
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -409,7 +429,7 @@ class _ReportsPageState extends State<ReportsPage> {
                                       Expanded(
                                         child: Text(
                                           selectedDateRange == null
-                                              ? 'Date Range'
+                                              ? appLoc.translate('Date Range')
                                               : '${selectedDateRange!.start.year}/${selectedDateRange!.start.month.toString().padLeft(2, '0')}/${selectedDateRange!.start.day.toString().padLeft(2, '0')} - ${selectedDateRange!.end.year}/${selectedDateRange!.end.month.toString().padLeft(2, '0')}/${selectedDateRange!.end.day.toString().padLeft(2, '0')}',
                                           style: TextStyle(
                                             color: Color(0xFF04274B),
@@ -438,7 +458,7 @@ class _ReportsPageState extends State<ReportsPage> {
                                 ),
                               ),
                             ),
-                            // --- Clear All Filters Button ---
+                            // Clear all filters button
                             if ((selectedStatus != null ||
                                     selectedSeverity != null) &&
                                 (selectedStatus != null ||
@@ -450,7 +470,7 @@ class _ReportsPageState extends State<ReportsPage> {
                                   height: 48,
                                   child: OutlinedButton.icon(
                                     icon: Icon(Icons.clear, size: 18),
-                                    label: Text('Clear'),
+                                    label: Text(appLoc.translate('Clear')),
                                     style: OutlinedButton.styleFrom(
                                       foregroundColor: Colors.red[700],
                                       side: BorderSide(
@@ -484,12 +504,16 @@ class _ReportsPageState extends State<ReportsPage> {
                 ),
               ),
               const SizedBox(height: 30),
-              // --- Reports List with Filtering Logic Applied ---
+              // Reports list with filtering logic applied
               FutureBuilder<List<Map<String, dynamic>>>(
                 future: fetchReports(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return Center(child: CircularProgressIndicator());
+                    return const Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xFF04274B),
+                      ),
+                    );
                   }
                   final reports = snapshot.data ?? [];
                   final filteredReports =
@@ -497,16 +521,19 @@ class _ReportsPageState extends State<ReportsPage> {
                         // Status filter logic
                         if (selectedStatus != null &&
                             (report['Status'] == null ||
-                                (report['Status'] as String).toLowerCase() !=
-                                    selectedStatus!.toLowerCase())) {
+                                appLoc.translate(
+                                      (report['Status'] as String),
+                                    ) !=
+                                    selectedStatus)) {
                           return false;
                         }
                         // Severity filter logic
                         if (selectedSeverity != null &&
                             (report['SeverityLevel'] == null ||
-                                (report['SeverityLevel'] as String)
-                                        .toLowerCase() !=
-                                    selectedSeverity!.toLowerCase())) {
+                                appLoc.translate(
+                                      (report['SeverityLevel'] as String),
+                                    ) !=
+                                    selectedSeverity)) {
                           return false;
                         }
                         // Date range filter logic
@@ -529,7 +556,20 @@ class _ReportsPageState extends State<ReportsPage> {
                       }).toList();
 
                   if (filteredReports.isEmpty) {
-                    return Center(child: Text('No reports found.'));
+                    return Center(
+                      child: Text(
+                        appLoc.translate(
+                          // Show offline message if no reports
+                          'Currently offline. Will sync when back online.',
+                        ),
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.blueGrey[400],
+                          fontWeight: FontWeight.w500,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    );
                   }
                   return ListView.separated(
                     shrinkWrap: true,
@@ -538,6 +578,26 @@ class _ReportsPageState extends State<ReportsPage> {
                     separatorBuilder: (_, __) => SizedBox(height: 20),
                     itemBuilder: (context, index) {
                       final report = filteredReports[index];
+                      final severity = report['SeverityLevel'];
+                      final status = report['Status'];
+                      final severityKey =
+                          severity != null &&
+                                  [
+                                    'Critical',
+                                    'Moderate',
+                                    'Small',
+                                  ].contains(severity)
+                              ? severity
+                              : null;
+                      final statusKey =
+                          status != null &&
+                                  [
+                                    'In Progress',
+                                    'Resolved',
+                                    'Reported',
+                                  ].contains(status)
+                              ? status
+                              : null;
                       return AnimatedContainer(
                         duration: Duration(milliseconds: 250),
                         curve: Curves.easeInOut,
@@ -576,10 +636,10 @@ class _ReportsPageState extends State<ReportsPage> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    // --- Row for Severity and Status Indicators ---
+                                    // Row for severity and status indicators
                                     Row(
                                       children: [
-                                        if (report['SeverityLevel'] != null)
+                                        if (severity != null)
                                           Expanded(
                                             child: Container(
                                               padding: EdgeInsets.symmetric(
@@ -587,14 +647,11 @@ class _ReportsPageState extends State<ReportsPage> {
                                                 vertical: 5,
                                               ),
                                               margin: EdgeInsets.only(
-                                                right:
-                                                    report['Status'] != null
-                                                        ? 8
-                                                        : 0,
+                                                right: status != null ? 8 : 0,
                                               ),
                                               decoration: BoxDecoration(
                                                 color: () {
-                                                  switch (report['SeverityLevel']) {
+                                                  switch (severity) {
                                                     case 'Critical':
                                                       return Colors.red[100];
                                                     case 'Moderate':
@@ -615,7 +672,7 @@ class _ReportsPageState extends State<ReportsPage> {
                                                   Icon(
                                                     Icons.warning_amber_rounded,
                                                     color: () {
-                                                      switch (report['SeverityLevel']) {
+                                                      switch (severity) {
                                                         case 'Critical':
                                                           return Colors.red;
                                                         case 'Moderate':
@@ -632,13 +689,15 @@ class _ReportsPageState extends State<ReportsPage> {
                                                   ),
                                                   const SizedBox(width: 4),
                                                   Text(
-                                                    '${report['SeverityLevel']}',
+                                                    appLoc.translate(
+                                                      severityKey ?? severity,
+                                                    ),
                                                     style: TextStyle(
                                                       fontSize: 13,
                                                       fontWeight:
                                                           FontWeight.w600,
                                                       color: () {
-                                                        switch (report['SeverityLevel']) {
+                                                        switch (severity) {
                                                           case 'Critical':
                                                             return Colors
                                                                 .red[900];
@@ -658,7 +717,7 @@ class _ReportsPageState extends State<ReportsPage> {
                                               ),
                                             ),
                                           ),
-                                        if (report['Status'] != null)
+                                        if (status != null)
                                           Expanded(
                                             child: Container(
                                               padding: EdgeInsets.symmetric(
@@ -667,19 +726,18 @@ class _ReportsPageState extends State<ReportsPage> {
                                               ),
                                               decoration: BoxDecoration(
                                                 color: () {
-                                                  final status =
-                                                      (report['Status'] ?? '')
+                                                  final s =
+                                                      (status ?? '')
                                                           .toString()
                                                           .toLowerCase()
                                                           .trim();
-                                                  if (status == 'resolved' ||
-                                                      status == 'resolved.' ||
-                                                      status == 'resolved!') {
+                                                  if (s == 'resolved' ||
+                                                      s == 'resolved.' ||
+                                                      s == 'resolved!') {
                                                     return Colors.green[100];
-                                                  } else if (status ==
+                                                  } else if (s ==
                                                           'in progress' ||
-                                                      status ==
-                                                          'in progress...') {
+                                                      s == 'in progress...') {
                                                     return Colors.yellow[100];
                                                   }
                                                   return Colors.blue[50];
@@ -694,23 +752,19 @@ class _ReportsPageState extends State<ReportsPage> {
                                                   Icon(
                                                     Icons.info_outline,
                                                     color: () {
-                                                      final status =
-                                                          (report['Status'] ??
-                                                                  '')
+                                                      final s =
+                                                          (status ?? '')
                                                               .toString()
                                                               .toLowerCase()
                                                               .trim();
-                                                      if (status ==
-                                                              'resolved' ||
-                                                          status ==
-                                                              'resolved.' ||
-                                                          status ==
-                                                              'resolved!') {
+                                                      if (s == 'resolved' ||
+                                                          s == 'resolved.' ||
+                                                          s == 'resolved!') {
                                                         return Colors
                                                             .green[700];
-                                                      } else if (status ==
+                                                      } else if (s ==
                                                               'in progress' ||
-                                                          status ==
+                                                          s ==
                                                               'in progress...') {
                                                         return Colors
                                                             .orange[700];
@@ -721,29 +775,27 @@ class _ReportsPageState extends State<ReportsPage> {
                                                   ),
                                                   const SizedBox(width: 4),
                                                   Text(
-                                                    '${report['Status']}',
+                                                    appLoc.translate(
+                                                      statusKey ?? status,
+                                                    ),
                                                     style: TextStyle(
                                                       fontSize: 13,
                                                       fontWeight:
                                                           FontWeight.w600,
                                                       color: () {
-                                                        final status =
-                                                            (report['Status'] ??
-                                                                    '')
+                                                        final s =
+                                                            (status ?? '')
                                                                 .toString()
                                                                 .toLowerCase()
                                                                 .trim();
-                                                        if (status ==
-                                                                'resolved' ||
-                                                            status ==
-                                                                'resolved.' ||
-                                                            status ==
-                                                                'resolved!') {
+                                                        if (s == 'resolved' ||
+                                                            s == 'resolved.' ||
+                                                            s == 'resolved!') {
                                                           return Colors
                                                               .green[900];
-                                                        } else if (status ==
+                                                        } else if (s ==
                                                                 'in progress' ||
-                                                            status ==
+                                                            s ==
                                                                 'in progress...') {
                                                           return Colors
                                                               .orange[900];
@@ -759,12 +811,12 @@ class _ReportsPageState extends State<ReportsPage> {
                                       ],
                                     ),
                                     const SizedBox(height: 16),
-                                    // --- Row for Image and Report Details ---
+                                    // Row for image and report details
                                     Row(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
                                       children: [
-                                        // --- Report Image Display ---
+                                        // Report image display
                                         Container(
                                           width: 90,
                                           height: 90,
@@ -803,13 +855,13 @@ class _ReportsPageState extends State<ReportsPage> {
                                                   ),
                                         ),
                                         const SizedBox(width: 22),
-                                        // --- Report Details Section ---
+                                        // Report details section
                                         Expanded(
                                           child: Column(
                                             crossAxisAlignment:
                                                 CrossAxisAlignment.start,
                                             children: [
-                                              // --- Location Row ---
+                                              // Location row
                                               Row(
                                                 children: [
                                                   Icon(
@@ -839,7 +891,7 @@ class _ReportsPageState extends State<ReportsPage> {
                                                 ],
                                               ),
                                               const SizedBox(height: 7),
-                                              // --- Zip Code Row ---
+                                              // Zip code row
                                               if (report['ZipCode'] != null &&
                                                   report['ZipCode']
                                                       .toString()
@@ -869,7 +921,7 @@ class _ReportsPageState extends State<ReportsPage> {
                                                     ),
                                                   ],
                                                 ),
-                                              // --- Timestamp Row ---
+                                              // Timestamp row
                                               if (report['Timestamp'] != null &&
                                                   report['Timestamp']
                                                       .toString()
@@ -905,7 +957,7 @@ class _ReportsPageState extends State<ReportsPage> {
                                                     ],
                                                   ),
                                                 ),
-                                              // --- User Row ---
+                                              // User row
                                               Padding(
                                                 padding: const EdgeInsets.only(
                                                   top: 7,
@@ -925,7 +977,7 @@ class _ReportsPageState extends State<ReportsPage> {
                                                     ),
                                                     const SizedBox(width: 5),
                                                     Text(
-                                                      '${report['UserName'] ?? 'Unknown'}',
+                                                      '${report['UserName'] ?? appLoc.translate('Unknown')}',
                                                       style: TextStyle(
                                                         fontSize: 13,
                                                         fontWeight:
@@ -941,7 +993,7 @@ class _ReportsPageState extends State<ReportsPage> {
                                         ),
                                       ],
                                     ),
-                                    // --- Description Section ---
+                                    // Description section
                                     const SizedBox(height: 18),
                                     Container(
                                       width: double.infinity,
@@ -955,7 +1007,7 @@ class _ReportsPageState extends State<ReportsPage> {
                                       ),
                                       child: Text(
                                         report['Description'] ??
-                                            'No description',
+                                            appLoc.translate('No description'),
                                         style: TextStyle(
                                           fontSize: 16,
                                           fontWeight: FontWeight.w500,
@@ -986,7 +1038,7 @@ class _ReportsPageState extends State<ReportsPage> {
   }
 }
 
-// --- Custom Dropdown Widget for Modern Filter Controls ---
+// Dropdown widget for filter selection
 class _ModernDropdown extends StatelessWidget {
   final String label;
   final String value;
@@ -1004,9 +1056,10 @@ class _ModernDropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final appLoc = AppLocalizations.of(context);
     return InputDecorator(
       decoration: InputDecoration(
-        labelText: label,
+        labelText: appLoc.translate(label),
         labelStyle: TextStyle(
           color: Color(0xFF04274B),
           fontWeight: FontWeight.w600,
@@ -1040,7 +1093,7 @@ class _ModernDropdown extends StatelessWidget {
                     (s) => DropdownMenuItem(
                       value: s,
                       child: Text(
-                        s,
+                        s, // Already translated in parent
                         style: TextStyle(
                           color: Color(0xFF04274B),
                           fontWeight: FontWeight.w600,

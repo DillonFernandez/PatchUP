@@ -6,10 +6,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../components/appbar.dart' show UserSession;
 import '../components/bottonnav.dart';
+import '../localization/app_localizations.dart';
 import '../main.dart';
 import 'register.dart';
 
-// --- Login Page Widget ---
+// Login page widget for user authentication
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
@@ -17,14 +18,13 @@ class LoginPage extends StatefulWidget {
   State<LoginPage> createState() => _LoginPageState();
 }
 
-// --- Login Page State and Logic ---
+// State class for login logic and UI
 class _LoginPageState extends State<LoginPage> {
   bool _obscurePassword = true;
-
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
-  // --- Login API Call and Result Handling ---
+  // Handle login logic and API call
   Future<void> _login() async {
     final url = 'http://192.168.1.100/patchup_app/lib/api/login.php';
     final response = await http.post(
@@ -36,19 +36,16 @@ class _LoginPageState extends State<LoginPage> {
       }),
     );
     final result = jsonDecode(response.body);
+    final appLoc = AppLocalizations.of(context);
     if (result["success"]) {
       UserSession.email = _emailController.text.trim();
-
-      // --- Save Email to Device ---
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('user_email', UserSession.email);
-
-      // --- Show Success Message and Navigate to Home ---
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text(
-            "Login successful! Welcome back!",
-            style: TextStyle(
+          content: Text(
+            appLoc.translate("Login successful! Welcome back!"),
+            style: const TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.w600,
               fontSize: 16,
@@ -69,7 +66,6 @@ class _LoginPageState extends State<LoginPage> {
         MaterialPageRoute(builder: (context) => const NavigationExample()),
       );
     } else {
-      // --- Show Error Dialog on Failed Login ---
       showDialog(
         context: context,
         builder:
@@ -78,9 +74,9 @@ class _LoginPageState extends State<LoginPage> {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(18),
               ),
-              title: const Text(
-                "Login Failed",
-                style: TextStyle(
+              title: Text(
+                appLoc.translate("Login Failed"),
+                style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
                   fontSize: 22,
@@ -100,9 +96,12 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ),
                   onPressed: () => Navigator.pop(context),
-                  child: const Text(
-                    "OK",
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                  child: Text(
+                    appLoc.translate("OK"),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                    ),
                   ),
                 ),
               ],
@@ -113,12 +112,14 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    // --- Login Page UI ---
+    final appLoc = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: const Color(0xFF04274B),
       appBar: AppBar(
         backgroundColor: const Color(0xFF04274B),
         elevation: 0,
+        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.transparent,
         leading: Container(
           margin: const EdgeInsets.only(left: 8, top: 8, bottom: 8),
           decoration: BoxDecoration(
@@ -143,7 +144,7 @@ class _LoginPageState extends State<LoginPage> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // --- Logo Section ---
+                // Logo section
                 Padding(
                   padding: const EdgeInsets.only(bottom: 32.0),
                   child: Center(
@@ -155,7 +156,7 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ),
                 ),
-                // --- Login Card Section ---
+                // Login form card
                 Center(
                   child: Card(
                     elevation: 18,
@@ -186,11 +187,11 @@ class _LoginPageState extends State<LoginPage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              // --- Welcome Title ---
-                              const Text(
-                                'Welcome Back!',
+                              // Welcome text
+                              Text(
+                                appLoc.translate('Welcome Back!'),
                                 textAlign: TextAlign.center,
-                                style: TextStyle(
+                                style: const TextStyle(
                                   fontSize: 30,
                                   fontWeight: FontWeight.bold,
                                   color: Color(0xFF04274B),
@@ -199,11 +200,13 @@ class _LoginPageState extends State<LoginPage> {
                                 ),
                               ),
                               const SizedBox(height: 8),
-                              // --- Subtitle ---
-                              const Text(
-                                'Log in to your account to continue',
+                              // Subtitle
+                              Text(
+                                appLoc.translate(
+                                  'Log in to your account to continue',
+                                ),
                                 textAlign: TextAlign.center,
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Color(0xFFB1B5C3),
                                   fontSize: 15,
                                   fontWeight: FontWeight.w500,
@@ -211,10 +214,10 @@ class _LoginPageState extends State<LoginPage> {
                                 ),
                               ),
                               const SizedBox(height: 30),
-                              // --- Email Label ---
-                              const Text(
-                                'Email',
-                                style: TextStyle(
+                              // Email label and field
+                              Text(
+                                appLoc.translate('Email Login'),
+                                style: const TextStyle(
                                   color: Color(0xFF8F9BB3),
                                   fontWeight: FontWeight.w600,
                                   fontSize: 15,
@@ -222,7 +225,6 @@ class _LoginPageState extends State<LoginPage> {
                                 ),
                               ),
                               const SizedBox(height: 6),
-                              // --- Email Input Field ---
                               Focus(
                                 child: Builder(
                                   builder: (context) {
@@ -273,10 +275,10 @@ class _LoginPageState extends State<LoginPage> {
                                 ),
                               ),
                               const SizedBox(height: 18),
-                              // --- Password Label ---
-                              const Text(
-                                'Password',
-                                style: TextStyle(
+                              // Password label and field
+                              Text(
+                                appLoc.translate('Password'),
+                                style: const TextStyle(
                                   color: Color(0xFF8F9BB3),
                                   fontWeight: FontWeight.w600,
                                   fontSize: 15,
@@ -284,7 +286,6 @@ class _LoginPageState extends State<LoginPage> {
                                 ),
                               ),
                               const SizedBox(height: 6),
-                              // --- Password Input Field ---
                               Focus(
                                 child: Builder(
                                   builder: (context) {
@@ -353,15 +354,15 @@ class _LoginPageState extends State<LoginPage> {
                                 ),
                               ),
                               const SizedBox(height: 12),
-                              // --- Forgot Password Link ---
+                              // Forgot password link
                               Row(
                                 children: [
                                   const Spacer(),
                                   GestureDetector(
                                     onTap: () {},
-                                    child: const Text(
-                                      'Forgot Password?',
-                                      style: TextStyle(
+                                    child: Text(
+                                      appLoc.translate('Forgot Password?'),
+                                      style: const TextStyle(
                                         color: Color(0xFF04274B),
                                         fontWeight: FontWeight.w600,
                                         fontSize: 14,
@@ -372,7 +373,7 @@ class _LoginPageState extends State<LoginPage> {
                                 ],
                               ),
                               const SizedBox(height: 22),
-                              // --- Login Button ---
+                              // Login button
                               SizedBox(
                                 width: double.infinity,
                                 height: 50,
@@ -386,9 +387,9 @@ class _LoginPageState extends State<LoginPage> {
                                     elevation: 0,
                                     shadowColor: Colors.transparent,
                                   ),
-                                  child: const Text(
-                                    'Log In',
-                                    style: TextStyle(
+                                  child: Text(
+                                    appLoc.translate('Log In'),
+                                    style: const TextStyle(
                                       color: Colors.white,
                                       fontWeight: FontWeight.w700,
                                       fontSize: 18,
@@ -405,14 +406,17 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                 ),
                 const SizedBox(height: 28),
-                // --- Footer with Sign Up Link ---
+                // Sign up link
                 Center(
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text(
-                        "Don't have an account? ",
-                        style: TextStyle(color: Colors.white, fontSize: 15),
+                      Text(
+                        appLoc.translate("Don't have an account?"),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                        ),
                       ),
                       GestureDetector(
                         onTap: () {
@@ -423,9 +427,9 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                           );
                         },
-                        child: const Text(
-                          'Sign Up',
-                          style: TextStyle(
+                        child: Text(
+                          appLoc.translate('Sign Up'),
+                          style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.w600,
                             fontSize: 15,

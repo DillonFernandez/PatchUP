@@ -1,8 +1,14 @@
 <?php
-// Section: Session Start and Redirect if Not Authenticated
+// Section: Session Handling and Authentication Redirect
 session_start();
 if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
     header("Location: login.php");
+    exit;
+}
+$userid = isset($_GET['userid']) ? intval($_GET['userid']) : 0;
+$name = isset($_GET['name']) ? htmlspecialchars($_GET['name']) : '';
+if (!$userid) {
+    header("Location: view_customers.php");
     exit;
 }
 ?>
@@ -12,55 +18,31 @@ if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== tru
 <head>
     <!-- Section: Meta, Styles, and Scripts -->
     <meta charset="UTF-8">
-    <title>Patch | Manage Reports</title>
+    <title>Patch | <?php echo $name ? $name : 'Customer'; ?>'s Reports</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
 </head>
 
-<body class="bg-gray-100 min-h-screen flex relative">
-
-    <!-- Section: Sidebar Navigation -->
-    <aside id="sidebar" class="w-64 bg-white shadow-md h-full md:h-screen fixed flex flex-col justify-between transform -translate-x-full md:translate-x-0 transition-transform duration-300 z-40 overflow-y-auto">
-        <div>
-            <div class="px-6 py-5 border-b border-gray-200">
-                <h2 class="text-xl font-bold text-[#04274B]">PatchUp Admin</h2>
-            </div>
-            <nav class="mt-6 px-6 space-y-2">
-                <a href="index.php" class="block py-2 px-4 rounded-md hover:bg-[#04274B] hover:text-white">Dashboard</a>
-                <a href="manage_admins.php" class="block py-2 px-4 rounded-md hover:bg-[#04274B] hover:text-white">Manage Admins</a>
-                <a href="manage_reports.php" class="block py-2 px-4 rounded-md hover:bg-[#04274B] hover:text-white text-[#04274B] font-medium bg-[#04274B] bg-opacity-10">Manage Reports</a>
-                <a href="view_customers.php" class="block py-2 px-4 rounded-md hover:bg-[#04274B] hover:text-white">View Customers</a>
-            </nav>
-        </div>
-        <!-- Section: Logout Button -->
-        <form action="logout.php" method="post" class="px-6 mb-6">
-            <hr class="border-t border-gray-200 mb-4 px-6">
-            <button type="submit" class="w-full py-2 px-4 rounded-md bg-red-500 text-white hover:bg-red-600 transition">Logout</button>
-        </form>
-    </aside>
-
-    <!-- Section: Mobile Sidebar Overlay -->
-    <div id="overlay" class="fixed inset-0 bg-black bg-opacity-50 hidden z-30 md:hidden"></div>
-
-    <!-- Section: Main Content -->
-    <main class="flex-1 md:ml-64 bg-gray-50 min-h-screen overflow-x-hidden">
-
-        <!-- Section: Header Bar -->
-        <header class="bg-white px-6 py-4 flex items-center justify-between border-b shadow-sm">
-            <button id="menuToggle" class="md:hidden text-[#04274B] focus:outline-none z-10">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
+<body class="bg-gray-100 min-h-screen flex flex-col">
+    <!-- Section: Header (No Sidebar) -->
+    <header class="bg-white px-6 py-4 flex items-center justify-between border-b shadow-sm w-full">
+        <a href="view_customers.php">
+            <button type="button" class="flex items-center justify-center px-2 py-1.5 rounded bg-[#04274B] text-white hover:bg-[#06477B] transition" title="Back to Customers">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                 </svg>
             </button>
-            <h1 class="text-xl md:text-2xl font-bold text-[#04274B] mx-auto md:mx-0 md:mb-1">Manage Reports</h1>
-        </header>
-
-        <!-- Section: Reports Management -->
+        </a>
+        <h1 class="text-xl md:text-2xl font-bold text-[#04274B] text-center flex-1">
+            <?php echo $name ? $name : 'Customer'; ?>'s Reports
+        </h1>
+        <div class="w-10"></div>
+    </header>
+    <main class="flex-1 bg-gray-50 min-h-screen overflow-x-hidden">
         <section class="w-full mx-auto px-[30px] py-[30px] sm:px-4 md:px-10 md:py-10 rounded-[20px]">
             <div class="max-w-7xl mx-auto rounded-[15px]">
                 <!-- Section: Filter Form -->
@@ -100,8 +82,6 @@ if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== tru
             </div>
         </section>
     </main>
-
-    <!-- Section: Sidebar Toggle Script -->
     <script src="javascript/script.js"></script>
     <script>
         // Section: Leaflet Heatmap Setup
@@ -109,22 +89,17 @@ if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== tru
 
         function initMap() {
             if (map) return;
-            const sriLankaBounds = L.latLngBounds(
-                [5.719, 79.521], // SW corner
-                [9.850, 81.881] // NE corner
-            );
+            const sriLankaBounds = L.latLngBounds([5.719, 79.521], [9.850, 81.881]);
             map = L.map('heatmap', {
                 maxBounds: sriLankaBounds,
                 maxBoundsViscosity: 1.0,
                 minZoom: 7,
                 maxZoom: 12,
                 zoomControl: true
-            }).setView([7.8731, 80.7718], 7); // Center on Sri Lanka
+            }).setView([7.8731, 80.7718], 7);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '© OpenStreetMap contributors'
             }).addTo(map);
-
-            // --- Create three heat layers for severity ---
             heatCritical = L.heatLayer([], {
                 radius: 25,
                 blur: 18,
@@ -155,52 +130,43 @@ if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== tru
                     1.0: 'darkgreen'
                 }
             }).addTo(map);
-
             map.setMaxBounds(sriLankaBounds);
         }
 
         function updateHeatmap(data) {
             if (!map) initMap();
-            // Separate points by severity
-            const critical = [];
-            const moderate = [];
-            const small = [];
+            const critical = [],
+                moderate = [],
+                small = [];
             data.forEach(r => {
                 if (r.Latitude && r.Longitude) {
                     const lat = parseFloat(r.Latitude);
                     const lng = parseFloat(r.Longitude);
-                    if (r.SeverityLevel === 'Critical') {
-                        critical.push([lat, lng, 1]);
-                    } else if (r.SeverityLevel === 'Moderate') {
-                        moderate.push([lat, lng, 1]);
-                    } else if (r.SeverityLevel === 'Small') {
-                        small.push([lat, lng, 1]);
-                    }
+                    if (r.SeverityLevel === 'Critical') critical.push([lat, lng, 1]);
+                    else if (r.SeverityLevel === 'Moderate') moderate.push([lat, lng, 1]);
+                    else if (r.SeverityLevel === 'Small') small.push([lat, lng, 1]);
                 }
             });
             heatCritical.setLatLngs(critical);
             heatModerate.setLatLngs(moderate);
             heatSmall.setLatLngs(small);
         }
-
         // Section: Fetch and Render Reports + Heatmap
         function fetchReports() {
             const status = document.getElementById('statusFilter').value;
             const severity = document.getElementById('severityFilter').value;
-            fetch(`api/manage_reports.php?status=${encodeURIComponent(status)}&severity=${encodeURIComponent(severity)}`)
+            const userid = <?php echo json_encode($userid); ?>;
+            fetch(`api/view_customers.php?action=reports&userid=${encodeURIComponent(userid)}&status=${encodeURIComponent(status)}&severity=${encodeURIComponent(severity)}`)
                 .then(res => res.json())
                 .then(data => {
-                    // --- Heatmap Data ---
-                    updateHeatmap(data);
-
-                    // --- Reports Grid ---
+                    updateHeatmap(data.reports || []);
                     const grid = document.getElementById('reportsGrid');
                     grid.innerHTML = '';
-                    if (!data.length) {
+                    if (!data.reports || !data.reports.length) {
                         grid.innerHTML = '<div class="col-span-full text-center text-gray-500 py-12 bg-white rounded-[20px] shadow-sm border border-gray-100">No reports found.</div>';
                         return;
                     }
-                    data.forEach(report => {
+                    data.reports.forEach(report => {
                         const sevClass = report.SeverityLevel === 'Critical' ? 'bg-red-100 text-red-700' :
                             report.SeverityLevel === 'Moderate' ? 'bg-yellow-100 text-yellow-700' :
                             'bg-green-100 text-green-700';
@@ -216,10 +182,6 @@ if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== tru
                 ${report.SeverityLevel}
             </span>
         </div>
-        <div class="manage-re-card-section rounded-[15px]">
-            <span class="manage-re-label rounded-[10px]">Reported By:</span>
-            <span class="manage-re-value rounded-[10px]">${report.ReporterName}</span>
-        </div>
         <div class="manage-re-img-wrap rounded-[15px]">
             ${img}
         </div>
@@ -227,17 +189,9 @@ if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== tru
             <span class="manage-re-label rounded-[10px]">Status:</span>
             <span class="manage-re-value rounded-[10px]">${report.Status}</span>
         </div>
-        <form class="statusForm manage-re-form-row rounded-[15px]" data-id="${report.ReportID}">
-            <select name="new_status" class="manage-re-form-select rounded-[10px]">
-                <option value="Reported" ${report.Status === 'Reported' ? 'selected' : ''}>Reported</option>
-                <option value="In Progress" ${report.Status === 'In Progress' ? 'selected' : ''}>In Progress</option>
-                <option value="Resolved" ${report.Status === 'Resolved' ? 'selected' : ''}>Resolved</option>
-            </select>
-            <button type="submit" class="manage-re-form-btn rounded-[10px]">Update</button>
-        </form>
         <div class="manage-re-card-section rounded-[15px]">
             <span class="manage-re-label rounded-[10px]">Description:</span>
-            <span class="manage-re-value rounded-[10px]">${report.Description}</span>
+            <span class="manage-re-value rounded-[10px]">${report.Description || '<span class="italic text-gray-400">(No description)</span>'}</span>
         </div>
         <div class="manage-re-card-section rounded-[15px]">
             <span class="manage-re-label rounded-[10px]">Zip Code:</span>
@@ -259,21 +213,6 @@ if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== tru
     </div>
 </div>
 `;
-                    });
-                    // Attach status update handlers
-                    document.querySelectorAll('.statusForm').forEach(form => {
-                        form.onsubmit = function(e) {
-                            e.preventDefault();
-                            const report_id = form.getAttribute('data-id');
-                            const new_status = form.querySelector('select').value;
-                            fetch('api/manage_reports.php', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/x-www-form-urlencoded'
-                                },
-                                body: `report_id=${encodeURIComponent(report_id)}&new_status=${encodeURIComponent(new_status)}`
-                            }).then(() => fetchReports());
-                        };
                     });
                 });
         }

@@ -2,13 +2,16 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
-// --- User Session Class for Storing Current User's Email ---
+import '../pages/notifications.dart';
+
+// User session class for storing current user's email
 class UserSession {
   static String email = '';
 }
 
-// --- AppBar Widget with User Points Display ---
+// AppBar widget with user points and notifications
 class UserAppBar extends StatefulWidget implements PreferredSizeWidget {
   const UserAppBar({super.key});
 
@@ -19,19 +22,21 @@ class UserAppBar extends StatefulWidget implements PreferredSizeWidget {
   State<UserAppBar> createState() => _UserAppBarState();
 }
 
-// --- State Class for UserAppBar: Handles Points Fetching and UI ---
+// State class for UserAppBar: handles points, notifications, and UI
 class _UserAppBarState extends State<UserAppBar> {
   int points = 0;
   bool loading = true;
+  int unreadCount = 0;
 
-  // --- Initialize State and Fetch User Points ---
+  // Initialize state and fetch user points and unread notifications
   @override
   void initState() {
     super.initState();
     fetchPoints();
+    fetchUnreadNotifications();
   }
 
-  // --- Fetch Points from Backend API Using User's Email ---
+  // Fetch points from backend API using user's email
   Future<void> fetchPoints() async {
     final email = UserSession.email;
     if (email.isEmpty) {
@@ -41,19 +46,69 @@ class _UserAppBarState extends State<UserAppBar> {
       return;
     }
     final url = 'http://192.168.1.100/patchup_app/lib/api/get_points.php';
-    final response = await http.post(
-      Uri.parse(url),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({"Email": email}),
-    );
-    final result = jsonDecode(response.body);
-    setState(() {
-      points = result['points'] ?? 0;
-      loading = false;
-    });
+    try {
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({"Email": email}),
+      );
+      final result = jsonDecode(response.body);
+      final fetchedPoints = result['points'] ?? 0;
+      setState(() {
+        points = fetchedPoints;
+        loading = false;
+      });
+      // Cache the points locally
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('cached_points_${email}', fetchedPoints);
+    } catch (e) {
+      // On error, load cached points if available
+      final prefs = await SharedPreferences.getInstance();
+      final cachedPoints = prefs.getInt('cached_points_${email}');
+      setState(() {
+        points = cachedPoints ?? 0;
+        loading = false;
+      });
+    }
   }
 
-  // --- Build the AppBar UI with Logo and Points Display ---
+  // Fetch unread notifications count from backend API
+  Future<void> fetchUnreadNotifications() async {
+    final email = UserSession.email;
+    if (email.isEmpty) {
+      setState(() {
+        unreadCount = 0;
+      });
+      return;
+    }
+    final url =
+        'http://192.168.1.100/patchup_app/lib/api/get_notifications.php';
+    try {
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({"Email": email}),
+      );
+      final result = jsonDecode(response.body);
+      if (result['success'] == true && result['notifications'] is List) {
+        final notifications = result['notifications'] as List;
+        final count = notifications.where((n) => n['IsRead'] == 0).length;
+        setState(() {
+          unreadCount = count;
+        });
+      } else {
+        setState(() {
+          unreadCount = 0;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        unreadCount = 0;
+      });
+    }
+  }
+
+  // Build the AppBar UI with logo, points, and notification badge
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -71,7 +126,7 @@ class _UserAppBarState extends State<UserAppBar> {
         automaticallyImplyLeading: false,
         title: Row(
           children: [
-            // --- App Logo ---
+            // App logo
             Image.asset(
               'assets/images/logo/Logo 1.webp',
               width: 105,
@@ -79,7 +134,7 @@ class _UserAppBarState extends State<UserAppBar> {
             ),
             const SizedBox(width: 12),
             Expanded(child: Container()),
-            // --- Points Indicator ---
+            // Points indicator
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
               decoration: BoxDecoration(
@@ -111,6 +166,60 @@ class _UserAppBarState extends State<UserAppBar> {
                       ),
                 ],
               ),
+            ),
+            const SizedBox(width: 6),
+            // Notification icon with badge
+            Stack(
+              children: [
+                IconButton(
+                  icon: const Icon(
+                    Icons.notifications_none_rounded,
+                    color: Colors.black87,
+                    size: 28,
+                  ),
+                  onPressed: () async {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const NotificationsPage(),
+                      ),
+                    );
+                    // Refresh unread count after returning
+                    fetchUnreadNotifications();
+                  },
+                  tooltip: 'Notifications',
+                ),
+                if (unreadCount > 0)
+                  Positioned(
+                    right: 8,
+                    top: 8,
+                    child: IgnorePointer(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 18,
+                          minHeight: 18,
+                        ),
+                        child: Text(
+                          unreadCount > 99 ? '99+' : '$unreadCount',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ],
         ),
